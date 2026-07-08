@@ -1,0 +1,1854 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brand Deck Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,800;1,900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --ui-navy:#002D95;
+    --ui-pink:#FF559C;
+    --ui-yellow:#F8FF20;
+    --ui-red:#FF1923;
+    --ui-ink:#14161a;
+    --ui-grey:#8a8f98;
+    --ui-line:#e4e6eb;
+    --ui-bg:#f3f4f7;
+    font-family:'Involve','Poppins',sans-serif;
+    --font:'Involve','Poppins',sans-serif;
+  }
+  /* ------------------------------------------------------------------
+     Шрифт "Involve" не входит в Google Fonts — подключается как локальный
+     файл. Положите файлы в ./assets/fonts/ и раскомментируйте @font-face.
+     Пока файлов нет — используется фолбэк Poppins, чтобы вёрстка не сломалась.
+  ------------------------------------------------------------------ */
+  /*
+  @font-face{
+    font-family:'Involve'; font-weight:400; font-style:normal; font-display:swap;
+    src:url('./assets/fonts/Involve-Regular.woff2') format('woff2');
+  }
+  @font-face{
+    font-family:'Involve'; font-weight:600; font-style:normal; font-display:swap;
+    src:url('./assets/fonts/Involve-SemiBold.woff2') format('woff2');
+  }
+  @font-face{
+    font-family:'Involve'; font-weight:700; font-style:normal; font-display:swap;
+    src:url('./assets/fonts/Involve-Bold.woff2') format('woff2');
+  }
+  */
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--ui-bg);color:var(--ui-ink);font-family:var(--font);}
+  h1,h2,h3,.brandfont{font-family:var(--font);}
+
+  /* ---------- upload screen (карточка в стиле слайда) ---------- */
+  #uploadScreen{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    padding:40px 20px;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(255,255,255,.9), transparent 40%),
+      radial-gradient(circle at 85% 75%, rgba(0,45,149,.06), transparent 45%),
+      var(--ui-bg);
+  }
+  .upload-slide{background:#eef0f4;aspect-ratio:auto;}
+  .upload-slide-inner{
+    position:relative;z-index:2;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:22px;padding:64px 64px 52px;
+  }
+  .upload-row{width:100%;max-width:960px;display:flex;gap:24px;align-items:stretch;justify-content:center;flex-wrap:wrap;}
+  .upload-col{flex:1 1 320px;min-width:280px;max-width:460px;display:flex;flex-direction:column;align-items:stretch;gap:10px;}
+  .brand-name-input{
+    width:70%;max-width:520px;border:none;border-bottom:2px solid #d3d7de;background:transparent;
+    text-align:center;font-family:var(--font);font-size:28px;font-weight:600;color:var(--ui-ink);
+    padding:6px 4px 12px;outline:none;transition:.15s;
+  }
+  .brand-name-input::placeholder{color:#aeb2bb;font-weight:500;}
+  .brand-name-input:focus{border-color:var(--ui-navy);}
+  .dropzone{
+    border:2px dashed #cfd3db;border-radius:20px;text-align:center;
+    cursor:pointer;transition:.15s;position:relative;background:#fafbfc;
+  }
+  .dropzone:hover, .dropzone.dragover{border-color:var(--ui-navy);background:#f3f6fd;}
+  .dropzone input[type=file]{display:none;}
+  .upload-dropzone{width:100%;flex:1;min-height:200px;padding:24px 6%;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .dropzone .dz-icon{font-size:34px;color:#b7bbc3;margin-bottom:10px;font-weight:300;line-height:1;}
+  .dropzone .dz-title{font-weight:600;font-size:17px;color:var(--ui-ink);}
+  .dropzone .dz-hint{color:var(--ui-grey);font-size:13px;margin-top:5px;}
+  .dz-preview{display:flex;align-items:center;gap:12px;justify-content:center;}
+  .dz-preview img{max-height:64px;max-width:140px;object-fit:contain;}
+  .dz-preview .dz-filename{font-size:13px;color:var(--ui-ink);font-weight:500;}
+  .field-error{color:var(--ui-red);font-size:13px;margin:0;display:none;text-align:center;}
+  .optional-tag{font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:#b7bbc3;margin-top:2px;}
+  .field-block{width:100%;max-width:560px;display:flex;flex-direction:column;align-items:center;gap:8px;}
+  .field-block-label{font-size:13px;font-weight:600;color:var(--ui-grey);text-align:center;}
+  .lang-select{width:100%;max-width:260px;padding:11px 30px 11px 16px;border-radius:100px;border:1.5px solid var(--ui-line);
+    background:#fafbfc;font-family:var(--font);font-size:14px;font-weight:600;color:var(--ui-ink);outline:none;cursor:pointer;transition:.15s;
+    appearance:none;-webkit-appearance:none;-moz-appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a8f98' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat;background-position:right 6px center;background-size:16px 16px;}
+  .lang-select:hover{border-color:var(--ui-navy);}
+  .lang-select:focus{border-color:var(--ui-navy);background-color:#f3f6fd;}
+  .btn{
+    font-family:var(--font);font-weight:600;border:none;border-radius:100px;cursor:pointer;
+    transition:.15s;display:inline-flex;align-items:center;gap:8px;justify-content:center;
+  }
+  .btn-primary{
+    padding:15px 40px;font-size:16px;background:var(--ui-red);color:#fff;
+  }
+  .btn-primary:hover{filter:brightness(.93);}
+  .btn-primary:disabled{background:#c7cbd4;cursor:not-allowed;}
+
+  .btn-ghost{background:transparent;color:var(--ui-navy);padding:10px 18px;font-size:14px;border:1.5px solid var(--ui-line);}
+  .btn-ghost:hover{border-color:var(--ui-navy);}
+  .btn-yellow{background:var(--ui-red);color:#fff;padding:10px 20px;font-size:14px;}
+  .btn-yellow:hover{filter:brightness(.92);}
+
+  /* ---------- loading state ---------- */
+  #loadingScreen{
+    min-height:100vh;display:none;align-items:center;justify-content:center;flex-direction:column;
+    gap:18px;background:var(--ui-bg);
+  }
+  .spinner{width:46px;height:46px;border-radius:50%;border:4px solid #dfe2e8;border-top-color:var(--ui-navy);animation:spin 0.9s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #loadingScreen p{font-family:'Involve','Poppins',sans-serif;font-size:15px;color:#555;}
+
+  /* ---------- presentation ---------- */
+  #presentation{display:none;padding:30px 0 90px;}
+  .toolbar{
+    position:sticky;top:0;z-index:50;background:rgba(255,255,255,.9);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--ui-line);padding:14px 24px;display:flex;gap:12px;
+    align-items:center;justify-content:center;flex-wrap:wrap;
+  }
+  .toolbar .tb-title{font-family:'Involve','Poppins',sans-serif;font-weight:600;font-size:14px;color:var(--ui-grey);margin-right:auto;}
+  .slides-wrap{max-width:1320px;margin:36px auto 0;display:flex;flex-direction:column;align-items:center;gap:34px;padding:0 20px;}
+
+  /* ---------- slide base ---------- */
+  .slide-outer{width:100%;max-width:1280px;}
+  .slide{
+    width:100%;aspect-ratio:16/9;position:relative;overflow:hidden;border-radius:18px;
+    box-shadow:0 12px 40px rgba(20,22,26,.10);background:#eef0f4;
+  }
+  .slide-inner{position:relative;z-index:2;width:100%;height:100%;padding:5.2% 6%;box-sizing:border-box;
+    display:flex;flex-direction:column;justify-content:center;}
+  .slide-label{
+    position:absolute;top:5.2%;left:6%;font-family:'Involve','Poppins',sans-serif;font-weight:600;color:#9aa0aa;
+    font-size:26px;z-index:3;
+  }
+  .corner-badge{position:absolute;top:5%;right:5.4%;z-index:3;width:44px;height:auto;
+    display:flex;align-items:center;justify-content:center;}
+  .corner-badge svg{width:100%;height:auto;display:block;}
+  .corner-wordmark{position:absolute;top:6%;right:5.4%;z-index:3;height:32px;}
+  .corner-wordmark svg{height:100%;width:auto;display:block;}
+
+  /* Кнопка "перегенерировать этот слайд" — слева от corner-badge, на одном
+     уровне с ним (справа сверху). */
+  .regen-btn{position:absolute;top:5%;right:calc(5.4% + 54px);z-index:6;height:32px;border-radius:16px;
+    border:none;background:rgba(255,255,255,.92);color:var(--ui-navy);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 14px rgba(20,22,26,.16);
+    transition:.15s;padding:0 14px;font-family:'Involve','Poppins',sans-serif;font-weight:600;font-size:13px;
+    white-space:nowrap;}
+  .regen-btn svg{flex:0 0 auto;}
+  .regen-btn:hover{background:#fff;transform:scale(1.05);}
+  .regen-btn:active{transform:scale(.96);}
+  .regen-btn:disabled{cursor:wait;opacity:.65;}
+  .regen-btn.is-loading svg{animation:regen-spin .8s linear infinite;}
+  @keyframes regen-spin{to{transform:rotate(360deg);}}
+  .exporting-pdf .regen-btn{display:none;}
+
+  .bubble{position:absolute;border-radius:50%;pointer-events:none;z-index:1;
+    background:radial-gradient(circle at 30% 30%, rgba(255,255,255,.85), rgba(255,255,255,.05) 60%, transparent 70%);
+    filter:blur(.5px);}
+  .swirl-deco{position:absolute;z-index:1;opacity:.35;pointer-events:none;object-fit:cover;}
+
+  [contenteditable="true"]{outline:none;border-radius:6px;}
+  [contenteditable="true"]:hover{outline:1.5px dashed rgba(0,0,0,.25);}
+  [contenteditable="true"]:focus{outline:1.5px solid var(--ui-navy);background:rgba(0,45,149,.03);}
+
+  /* slide 1 */
+  .s1 .s1-logo-frame{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;}
+  .s1 .s1-logo-frame img{width:auto;height:120px;object-fit:contain;}
+
+  /* slide 2 legend */
+  .legend-text{position:relative;z-index:2;}
+  .legend-wordmark{max-height:80px;max-width:46%;object-fit:contain;object-position:left;display:block;margin:0 0 5%;}
+  .legend-text h2{font-size:46px;margin:5% 0 2.4%;color:#111;font-weight:700;}
+  .legend-text p{font-size:19px;line-height:1.55;color:#2c2f36;max-width:78%;margin:0 0 14px;}
+  .legend-text b{font-weight:700;}
+
+  /* slide 3 palette */
+  .palette-row{position:absolute;left:6%;right:6%;top:38%;display:flex;flex-wrap:wrap;gap:24px;justify-content:center;}
+  .swatch{width:180px;flex:0 0 180px;display:flex;flex-direction:column;align-items:center;}
+  .swatch .sq{width:100%;aspect-ratio:1/1;border-radius:20px;box-shadow:0 6px 18px rgba(0,0,0,.08);}
+  .swatch .hex{margin-top:14px;background:rgba(255,255,255,.75);border-radius:10px;padding:9px 6px;
+    font-family:'Involve','Poppins',sans-serif;font-weight:600;font-size:15px;width:100%;text-align:center;}
+
+  /* slide 4 — color logo variations: 5 блоков под 5 цветов палитры
+     (2 колонки по бокам из двух плиток друг под другом + одна большая
+     плитка в центре на всю высоту) */
+  .lv-grid{position:absolute;left:6%;right:6%;top:26%;bottom:8%;display:grid;
+    grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:1em;}
+  .lv-grid .lv-tile{border-radius:22px;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 6px 20px rgba(0,0,0,.08);}
+  .lv-grid .lv-tile:nth-child(1){grid-column:1;grid-row:1;}
+  .lv-grid .lv-tile:nth-child(2){grid-column:1;grid-row:2;}
+  .lv-grid .lv-tile:nth-child(3){grid-column:2;grid-row:1/3;}
+  .lv-grid .lv-tile:nth-child(4){grid-column:3;grid-row:1;}
+  .lv-grid .lv-tile:nth-child(5){grid-column:3;grid-row:2;}
+  .lv-grid img{max-width:55%;max-height:32%;object-fit:contain;}
+  .lv-grid .lv-logo-recolor{width:55%;height:32%;}
+
+  /* slide 5 symbol — 5 плиток (реальный кроп лого, перекрашенный в 5 цветов
+     палитры), в ряд */
+  .symbol-row{position:absolute;left:6%;right:6%;top:32%;display:flex;gap:2%;justify-content:center;}
+  .symtile{flex:1;max-width:18%;aspect-ratio:1/1;border-radius:26px;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 6px 20px rgba(0,0,0,.08);overflow:hidden;}
+  .symtile img{width:100%;height:100%;object-fit:cover;display:block;border-radius:26px;}
+  .symtile-mark{width:46%;height:46%;}
+  .ph-icon{width:36%;height:36%;border-radius:50%;background:rgba(255,255,255,.7);}
+
+  /* slide 6 pattern — 3x2 сетка сгенерированных тайлов */
+  .pattern-grid{position:absolute;left:6%;right:6%;top:26%;bottom:8%;display:grid;
+    grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:1em;}
+  .pg-tile{position:relative;border-radius:18px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.08);}
+  .pg-tile img{width:100%;height:100%;object-fit:cover;display:block;}
+
+  /* slide 7 banners — раскладка на трёх штатных пропорциях gpt-image-1
+     БЕЗ КРОПА: Square (1024x1024) слева на всю высоту, два Wide
+     (1536x1024) друг под другом по центру, Tall (1024x1536) справа на
+     всю высоту. Колонки заданы через fr в реальных пикселях так, чтобы
+     левая и правая колонка получали ширину, равную суммарной высоте
+     двух строк (2048), — тогда Square рендерится честным квадратом, а
+     Tall — честным 2:3, без вытягивания и без обрезки картинки внутри. */
+  .banner-grid-v2{position:absolute;left:6%;right:6%;top:22%;bottom:8%;display:grid;
+    grid-template-columns:2048fr 1536fr 1365fr;grid-template-rows:1024fr 1024fr;gap:16px;}
+  .bn-tile{border-radius:16px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.08);
+    background:var(--ui-bg);display:flex;align-items:center;justify-content:center;position:relative;}
+  .bn-tile img{width:100%;height:100%;object-fit:cover;display:block;}
+  .bn-tile .bn-logo-badge{position:absolute;top:5%;left:5%;height:9%;max-width:42%;z-index:2;
+    background:#fff;border-radius:8px;padding:3% 5%;display:flex;align-items:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.22);box-sizing:content-box;}
+  .bn-tile .bn-logo-badge img{width:auto;height:100%;max-width:100%;object-fit:contain;
+    display:block;box-shadow:none;border-radius:0;}
+  .bn-tile:nth-child(1){grid-column:1;grid-row:1/3;}
+  .bn-tile:nth-child(2){grid-column:2;grid-row:1;}
+  .bn-tile:nth-child(3){grid-column:2;grid-row:2;}
+  .bn-tile:nth-child(4){grid-column:3;grid-row:1/3;}
+
+  /* slide 8 example */
+  .example-frame{position:absolute;left:6%;right:6%;top:15%;bottom:8%;background:#fff;border-radius:20px;
+    box-shadow:0 10px 30px rgba(0,0,0,.12);overflow:hidden;display:flex;flex-direction:column;}
+  .example-frame img{object-position:top;}
+  .ex-nav{display:flex;align-items:center;gap:3%;padding:2% 4%;}
+  .ex-nav .ex-logo{height:20px;max-width:22%;object-fit:contain;object-position:left;}
+  .ex-nav .ex-link{font-size:13px;font-weight:500;color:#fff;opacity:.85;}
+  .ex-nav .ex-cta{margin-left:auto;font-size:12px;font-weight:700;border-radius:100px;padding:6px 16px;}
+  .ex-hero{margin:3% 4% 0;border-radius:14px;display:flex;overflow:hidden;height:34%;}
+  .ex-hero .ex-hero-left{flex:1;display:flex;align-items:center;padding-left:5%;font-family:'Involve','Poppins',sans-serif;font-weight:600;font-size:1.5vw;}
+  .ex-hero .ex-hero-right{flex:2;display:flex;align-items:center;justify-content:center;font-family:'Involve','Poppins',sans-serif;font-weight:800;font-style:italic;font-size:1.8vw;text-align:center;color:#fff;}
+  .ex-cards{display:flex;gap:2%;padding:3% 4%;flex:1;}
+  .ex-cards .ex-card{flex:1;border-radius:12px;background:#e7e9ee;}
+
+  /* slide 9 thanks */
+  .s9{display:flex;align-items:center;justify-content:center;}
+  .s9 .thanks-wrap{position:relative;z-index:2;text-align:center;width:100%;padding:0 8%;}
+  .s9 .thanks-heading{width:56%;max-width:620px;margin:0 auto;}
+  .s9 .footer-note{position:absolute;left:0;right:0;bottom:0;text-align:center;font-size:24px;color:#8a8f98;
+    padding:36px 0;background-image:url('/footer-bottom.png');background-repeat:no-repeat;background-position:center;background-size:cover;}
+  .s9 .top-logo{position:absolute;top:8%;left:0;right:0;display:flex;align-items:center;justify-content:center;}
+
+  @media (max-width:720px){
+    .legend-text h2{font-size:30px;}
+    .legend-text p{font-size:14px;}
+    .slide-label{font-size:18px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ UPLOAD SCREEN (оформлен как первый слайд деки) ============ -->
+<div id="uploadScreen">
+  <div class="slide-outer" style="max-width:1200px;">
+    <div class="slide upload-slide">
+      <div class="bubble" style="width:9%;top:-4%;left:42%;"></div>
+      <div class="bubble" style="width:6%;top:34%;left:2%;"></div>
+      <div class="slide-label">New Brand</div>
+      <div class="corner-wordmark"></div>
+
+      <div class="upload-slide-inner">
+        <input id="brandNameInput" class="brand-name-input" type="text" placeholder="Brand name">
+
+        <div class="upload-row">
+          <div class="upload-col">
+            <div class="dropzone upload-dropzone" id="logoDropzone">
+              <input type="file" id="logoFileInput" accept=".svg,.png,.jpg,.jpeg,image/svg+xml,image/png,image/jpeg">
+              <div id="logoDzContent">
+                <div class="dz-icon">＋</div>
+                <div class="dz-title">Drag &amp; drop your logo</div>
+                <div class="dz-hint">SVG, PNG or JPG</div>
+              </div>
+            </div>
+            <div class="field-error" id="logoError">Wrong format. Please upload SVG, PNG or JPG.</div>
+          </div>
+
+          <div class="upload-col">
+            <div class="dropzone upload-dropzone" id="creativeDropzone">
+              <input type="file" id="creativeFileInput" accept=".png,.jpg,.jpeg,image/png,image/jpeg">
+              <div id="creativeDzContent">
+                <div class="dz-icon">＋</div>
+                <div class="dz-title">Drag &amp; drop a reference banner/creative</div>
+                <div class="dz-hint">PNG or JPG</div>
+                <div class="optional-tag">Optional</div>
+              </div>
+            </div>
+            <div class="field-error" id="creativeError">Wrong format. Please upload PNG or JPG.</div>
+          </div>
+        </div>
+
+        <div class="field-block">
+          <div class="field-block-label">Banner text language</div>
+          <select id="bannerLangSelect" class="lang-select">
+            <option value="English" selected>English</option>
+            <option value="Russian">Русский</option>
+            <option value="Ukrainian">Українська</option>
+            <option value="Spanish">Español</option>
+            <option value="French">Français</option>
+            <option value="German">Deutsch</option>
+            <option value="Portuguese">Português</option>
+            <option value="Italian">Italiano</option>
+            <option value="Polish">Polski</option>
+            <option value="Turkish">Türkçe</option>
+          </select>
+        </div>
+
+        <button class="btn btn-primary" id="generateBtn" disabled>Generate presentation</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ LOADING ============ -->
+<div id="loadingScreen">
+  <div class="spinner"></div>
+  <p id="loadingText">Extracting colors from the logo…</p>
+</div>
+
+<!-- ============ PRESENTATION ============ -->
+<div id="presentation">
+  <div class="toolbar">
+    <span class="tb-title">Brand Deck · <span id="tbBrandName">—</span></span>
+    <button class="btn btn-ghost" id="restartBtn">Start over</button>
+    <button class="btn btn-yellow" id="downloadPdfBtn">Download PDF</button>
+  </div>
+  <div class="slides-wrap" id="slidesWrap"></div>
+</div>
+
+<script>
+const CLICKABLE_LOGO_FULL_SVG = `<svg viewBox="0 0 298 60" fill="none" xmlns="http://www.w3.org/2000/svg" style="height:100%;width:auto;display:block;">
+<path d="M96.0671 44.7759C97.5845 44.7759 99.6709 44.6592 101.226 44.5426L102.326 36.3383C100.771 36.4938 98.7226 36.6493 97.1672 36.6493C92.4254 36.6493 90.3011 35.4051 90.946 30.4669C91.6288 25.5288 94.1325 24.2457 98.8743 24.2457C100.43 24.2457 102.288 24.3623 103.844 24.5179L104.982 16.3136C103.464 16.1969 101.492 16.1191 99.9744 16.1191C90.1493 16.1191 83.9281 20.7851 82.6003 30.4669C81.2726 40.1488 86.2421 44.7759 96.0671 44.7759Z" fill="#FF1923"/>
+<path d="M106.417 44.1926H124.474L125.536 36.416H115.673L118.366 16.7413H110.173L106.417 44.1926Z" fill="#FF1923"/>
+<path d="M128.387 44.1926H136.581L140.336 16.7413H132.142L128.387 44.1926Z" fill="#FF1923"/>
+<path d="M156.562 44.7759C158.08 44.7759 160.166 44.6592 161.722 44.5426L162.822 36.3383C161.266 36.4938 159.218 36.6493 157.663 36.6493C152.921 36.6493 150.796 35.4051 151.441 30.4669C152.124 25.5288 154.628 24.2457 159.37 24.2457C160.925 24.2457 162.784 24.3623 164.339 24.5179L165.477 16.3136C163.96 16.1969 161.987 16.1191 160.47 16.1191C150.645 16.1191 144.423 20.7851 143.096 30.4669C141.768 40.1488 146.737 44.7759 156.562 44.7759Z" fill="#FF1923"/>
+<path d="M183.869 44.1926H193.239L185.121 30.0392L196.994 16.7413H187.625L179.051 26.5786H177.496L178.862 16.7413H170.668L166.912 44.1926H175.106L176.51 33.8109H178.141L183.869 44.1926Z" fill="#FF1923"/>
+<path d="M216.024 16.7413H205.782L192.277 44.1926H201.04L203.24 39.3711H212.345L213.255 44.1926H222.056L216.024 16.7413ZM209.727 25.3733L211.017 32.2556H206.541L209.727 25.3733Z" fill="#FF1923"/>
+<path d="M249.931 36.2216C250.272 33.4609 249.4 31.4779 247.389 30.1559C248.982 28.8727 249.931 27.0841 250.272 24.79C251.031 19.2687 246.782 16.7413 238.816 16.7413H228.422L224.666 44.1926H236.274C244.241 44.1926 249.172 41.6652 249.931 36.2216ZM241.623 35.3273C241.395 36.9604 240.295 37.1937 237.299 37.1937H233.809L234.302 33.4998H237.83C240.826 33.4998 241.851 33.7331 241.623 35.3273ZM241.889 25.6066C241.661 27.2008 240.561 27.473 237.564 27.473H235.136L235.667 23.7402H238.095C241.092 23.7402 242.116 23.9735 241.889 25.6066Z" fill="#FF1923"/>
+<path d="M253.228 44.1926H271.285L272.347 36.416H262.484L265.178 16.7413H256.984L253.228 44.1926Z" fill="#FF1923"/>
+<path d="M275.122 44.1926H293.938L295 36.416H284.378L284.72 33.772H289.803L290.751 26.7731H285.706L286.01 24.5179H296.252L297.314 16.7413H278.878L275.122 44.1926Z" fill="#FF1923"/>
+<path d="M60 30C60 46.5685 46.5685 60 30 60C13.4315 60 0 46.5685 0 30C0 13.4315 13.4315 0 30 0C46.5685 0 60 13.4315 60 30Z" fill="#FF1923"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M25.4557 19.7155C19.3268 20.0388 15.2005 22.7473 13.4159 27.6183C13.0196 28.6998 12.7313 29.9593 12.5764 31.2858C12.518 31.7853 12.5265 33.3458 12.5899 33.7924C12.9477 36.3095 14.2145 38.0541 16.4687 39.1345C17.6741 39.7123 19.0458 40.0542 20.8995 40.239C21.2736 40.2763 21.75 40.2852 23.8603 40.2944C25.779 40.3027 26.3753 40.298 26.3753 40.2744C26.3753 40.2574 26.4951 39.6099 26.6416 38.8355C27.0733 36.5527 27.2671 35.5258 27.3111 35.2884C27.394 34.8402 27.4362 34.6179 27.4491 34.5617L27.4622 34.5043L25.1423 34.4944C23.1683 34.4859 22.7662 34.4778 22.4461 34.4398C20.3983 34.1967 19.4559 33.5151 19.1937 32.0874C19.1324 31.7536 19.1341 30.9829 19.1971 30.5377C19.6127 27.6026 20.8449 26.1465 23.3058 25.6826C24.1539 25.5227 24.2746 25.5166 26.8263 25.5053L29.1583 25.4949L29.174 25.4244C29.2017 25.2998 30.2487 19.7422 30.2487 19.7196C30.2487 19.6999 25.823 19.6962 25.4557 19.7155ZM32.7288 19.725C32.7288 19.742 32.609 20.3895 32.4625 21.1639C32.0308 23.4466 31.8369 24.4735 31.793 24.7109C31.71 25.1592 31.6678 25.3815 31.655 25.4376L31.6418 25.4951L33.9618 25.505C35.9358 25.5134 36.3379 25.5216 36.658 25.5596C38.7058 25.8027 39.6481 26.4843 39.9104 27.9119C39.9717 28.2458 39.97 29.0164 39.907 29.4616C39.4914 32.3968 38.2592 33.8528 35.7983 34.3168C34.9502 34.4766 34.8295 34.4827 32.2778 34.4941L29.9458 34.5045L29.9301 34.5749C29.9009 34.706 28.8554 40.2578 28.8554 40.2816C28.8554 40.2956 29.8863 40.3008 31.3703 40.2944C34.0715 40.2826 34.1252 40.2803 35.2896 40.1293C39.267 39.6132 42.3023 37.9428 44.2289 35.2097C45.4535 33.4724 46.2272 31.2861 46.5277 28.7136C46.586 28.2141 46.5776 26.6535 46.5141 26.207C46.1563 23.6899 44.8896 21.9453 42.6353 20.8648C41.4299 20.2871 40.0583 19.9452 38.2046 19.7604C37.8304 19.7231 37.3541 19.7142 35.2437 19.705C33.3251 19.6967 32.7288 19.7014 32.7288 19.725ZM23.6273 27.3354C22.9542 27.4292 22.2661 27.9386 21.9968 28.5421C21.8719 28.8222 21.3872 31.1226 21.3872 31.4355C21.3872 32.0115 21.7397 32.4621 22.3207 32.6289C22.4806 32.6748 22.7632 32.6769 28.7578 32.6769C35.5267 32.6769 35.1285 32.685 35.5001 32.5398C36.0673 32.3181 36.5386 31.8451 36.7236 31.312C36.7748 31.1647 37.254 28.9258 37.283 28.6987C37.3263 28.3593 37.1865 27.9675 36.9314 27.7134C36.7622 27.5449 36.6165 27.4578 36.3713 27.3785L36.1982 27.3225L29.984 27.319C26.5661 27.3171 23.7056 27.3245 23.6273 27.3354Z" fill="white"/>
+</svg>`;
+
+const THANKYOU_HEADING_SVG = `<svg viewBox="0 0 868 192" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">
+<path d="M96.2637 22.8243L99.1686 2.07455H161.003L158.098 22.8243H138.386L131.02 75.3213H108.61L115.976 22.8243H96.2637ZM207.885 75.3213L211.724 47.6203H187.343L183.504 75.3213H161.095L171.366 2.07455H193.775L190.041 28.323H214.422L218.156 2.07455H240.566L230.295 75.3213H207.885ZM302.505 2.07455L319.001 75.3213H294.932L292.442 62.4564H267.542L261.524 75.3213H237.558L274.493 2.07455H302.505ZM285.283 25.1068L276.568 43.4704H288.81L285.283 25.1068ZM369.923 75.3213L354.983 28.2193L348.343 75.3213H326.14L336.412 2.07455H368.263L383.202 49.2803L389.842 2.07455H412.045L401.773 75.3213H369.923ZM465.323 75.3213L449.657 47.6203H445.196L441.357 75.3213H418.947L429.218 2.07455H451.628L447.893 28.323H452.147L475.594 2.07455H501.22L468.747 37.5567L490.949 75.3213H465.323ZM550.979 75.3213L554.818 48.1391L531.163 2.07455H556.166L568.513 29.983L588.744 2.07455H613.747L577.227 48.1391L573.389 75.3213H550.979ZM689.125 38.6979C685.494 64.5314 669.101 77.3963 643.579 77.3963C618.057 77.3963 605.399 64.5314 609.031 38.6979C612.558 12.8644 628.95 -0.000431085 654.473 -0.000431085C679.995 -0.000431085 692.652 12.8644 689.125 38.6979ZM631.855 38.6979C629.988 51.874 634.968 55.7127 646.588 55.7127C658.208 55.7127 664.433 51.874 666.3 38.6979C668.064 25.5218 663.084 21.6831 651.464 21.6831C639.844 21.6831 633.619 25.5218 631.855 38.6979ZM749.056 41.8104L754.658 2.07455H777.068L771.258 42.8479C767.834 67.4364 752.998 77.2925 730.589 77.3963C708.075 77.3963 696.144 67.4364 699.568 42.8479L705.378 2.07455H727.787L722.185 41.8104C720.732 52.1853 724.26 55.7127 733.597 55.7127C743.038 55.7127 747.603 52.1853 749.056 41.8104ZM3.89448e-05 189.321L10.2712 116.075H59.6557L56.7507 136.824H29.776L28.3235 146.992H44.1971L41.6034 165.667H25.7298L22.4098 189.321H3.89448e-05ZM142.518 152.698C138.887 178.531 122.494 191.396 96.9721 191.396C71.4498 191.396 58.7924 178.531 62.4237 152.698C65.9511 126.864 82.3435 114 107.866 114C133.388 114 146.045 126.864 142.518 152.698ZM85.2484 152.698C83.3809 165.874 88.3609 169.713 99.9808 169.713C111.601 169.713 117.826 165.874 119.693 152.698C121.457 139.522 116.477 135.683 104.857 135.683C93.2371 135.683 87.0122 139.522 85.2484 152.698ZM222.265 141.286C220.813 151.349 216.144 158.3 207.429 162.347L209.608 166.082C210.956 168.468 213.031 169.194 215.833 169.194C217.7 169.194 220.19 168.883 222.161 168.468L219.153 190.048C216.663 190.359 213.239 190.566 210.438 190.566C199.959 190.566 195.498 188.18 191.14 179.569L184.293 166.393H175.578L172.362 189.321H149.952L160.223 116.075H182.633V116.178H190.725C215.314 116.178 224.651 124.478 222.265 141.286ZM199.44 141.389C199.959 137.758 197.677 136.721 188.65 136.721H179.728L178.379 146.162H187.302C196.328 146.162 198.922 145.124 199.44 141.389ZM278.606 189.321L267.297 116.075H290.848L296.243 163.384L316.993 116.075H335.253L342.619 163.384L361.397 116.075H384.948L353.097 189.321H328.924L322.076 145.02L302.779 189.321H278.606ZM432.191 116.075L448.687 189.321H424.618L422.128 176.456H397.228L391.21 189.321H367.244L404.179 116.075H432.191ZM414.969 139.107L406.254 157.47H418.496L414.969 139.107ZM449.76 136.824L452.665 116.075H514.499L511.594 136.824H491.882L484.516 189.321H462.106L469.472 136.824H449.76ZM551.836 190.878C524.965 190.878 511.374 178.531 515.006 152.698C518.637 126.864 535.652 114.415 562.523 114.415C566.673 114.415 572.067 114.622 576.217 114.933L573.105 136.824C568.851 136.409 563.768 136.098 559.514 136.098C546.545 136.098 539.698 139.522 537.83 152.698C536.067 165.874 541.877 169.194 554.845 169.194C559.099 169.194 564.701 168.779 568.955 168.364L565.946 190.255C561.693 190.566 555.986 190.878 551.836 190.878ZM626.934 189.321L630.772 161.62H606.391L602.553 189.321H580.143L590.414 116.075H612.824L609.089 142.323H633.47L637.205 116.075H659.615L649.343 189.321H626.934ZM666.774 189.321L677.045 116.075H699.455L689.184 189.321H666.774ZM750.369 189.321L735.429 142.219L728.789 189.321H706.587L716.858 116.075H748.709L763.649 163.28L770.289 116.075H792.491L782.22 189.321H750.369ZM836.328 190.878C809.457 190.878 796.177 178.531 799.809 152.698C803.44 126.864 820.558 114.415 848.363 114.415C856.04 114.415 861.85 114.726 865.897 115.037L862.888 137.032C858.634 136.617 852.513 136.098 845.354 136.098C831.659 136.098 824.501 139.522 822.633 152.698C820.973 165.044 827.198 169.194 840.167 169.194H843.591L845.873 152.802H867.972L863.199 187.246C855.003 189.321 845.873 190.878 836.328 190.878Z" fill="#FF1923"/>
+</svg>`;
+
+/* =========================================================================
+   Фирменные ассеты Clickable (реальные SVG-пути из брендбука)
+   ========================================================================= */
+const CLICKABLE_ICON_SVG = `<svg viewBox="0 0 71 46" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M26.6825 0.031862C14.0236 0.748369 5.50104 6.75116 1.81502 17.547C0.996623 19.944 0.401145 22.7355 0.0810739 25.6754C-0.0393915 26.7825 -0.021952 30.2413 0.109104 31.2309C0.848127 36.8097 3.46447 40.6763 8.12054 43.071C10.6102 44.3514 13.4433 45.1092 17.272 45.5188C18.0448 45.6014 19.0286 45.6212 23.3874 45.6415C27.3502 45.66 28.5818 45.6496 28.5818 45.5972C28.5818 45.5595 28.8293 44.1244 29.1318 42.4082C30.0236 37.3488 30.4239 35.0729 30.5147 34.5467C30.686 33.5532 30.7732 33.0605 30.7998 32.936L30.8269 32.8087L26.0351 32.7868C21.958 32.7681 21.1275 32.75 20.4664 32.6658C16.2368 32.127 14.2904 30.6163 13.7488 27.4521C13.6221 26.7123 13.6256 25.0042 13.7558 24.0175C14.6142 17.5122 17.1592 14.2851 22.2421 13.2569C23.9937 12.9026 24.243 12.8891 29.5134 12.8638L34.33 12.8408L34.3624 12.6847C34.4197 12.4086 36.5822 0.0909076 36.5822 0.0407632C36.5822 -0.00286589 27.4411 -0.011069 26.6825 0.031862ZM41.7047 0.0528067C41.7047 0.0905023 41.4572 1.52555 41.1547 3.2418C40.2629 8.30121 39.8626 10.5771 39.7718 11.1033C39.6005 12.0968 39.5133 12.5895 39.4867 12.714L39.4596 12.8413L44.2514 12.8632C48.3285 12.8819 49.159 12.9 49.8201 12.9842C54.0497 13.523 55.9961 15.0337 56.5378 18.1979C56.6644 18.9377 56.6609 20.6458 56.5307 21.6325C55.6723 28.1378 53.1273 31.3649 48.0445 32.3931C46.2928 32.7474 46.0435 32.7609 40.7731 32.7862L35.9565 32.8092L35.9241 32.9653C35.8639 33.2558 33.7043 45.5604 33.7043 45.6133C33.7043 45.6443 35.8336 45.6558 38.8988 45.6415C44.478 45.6155 44.5888 45.6105 46.9939 45.2756C55.209 44.1318 61.4782 40.4296 65.4574 34.3722C67.9867 30.5218 69.5847 25.6763 70.2054 19.9746C70.3259 18.8675 70.3085 15.4087 70.1774 14.4191C69.4384 8.84035 66.822 4.97371 62.166 2.57905C59.6763 1.29862 56.8432 0.540811 53.0145 0.131221C52.2417 0.0485579 51.2579 0.0288384 46.8991 0.00847811C42.9363 -0.0100206 41.7047 0.000451743 41.7047 0.0528067ZM22.906 16.92C21.5159 17.128 20.0946 18.2569 19.5385 19.5946C19.2804 20.2153 18.2792 25.3138 18.2792 26.0072C18.2792 27.2838 19.0073 28.2825 20.2074 28.6522C20.5376 28.7539 21.1214 28.7586 33.5029 28.7586C47.4835 28.7586 46.6611 28.7765 47.4285 28.4547C48.6 27.9633 49.5736 26.9151 49.9557 25.7336C50.0613 25.4071 51.0511 20.4449 51.111 19.9417C51.2006 19.1893 50.9118 18.3211 50.3849 17.7579C50.0353 17.3844 49.7345 17.1914 49.2281 17.0156L48.8704 16.8914L36.0354 16.8837C28.9761 16.8795 23.0679 16.8958 22.906 16.92Z" fill="#FF1923"/></svg>`;
+
+const CLICKABLE_WORDMARK_SVG = `<svg viewBox="0 0 225 46" fill="none" xmlns="http://www.w3.org/2000/svg" style="height:100%;width:auto;display:block;">
+<path d="M14.842 38.0391C16.4187 38.0391 18.5867 37.9152 20.2028 37.7913L21.3459 29.0789C19.7298 29.2441 17.6012 29.4093 15.9851 29.4093C11.058 29.4093 8.85058 28.088 9.52067 22.844C10.2302 17.6 12.8317 16.2374 17.7589 16.2374C19.375 16.2374 21.3065 16.3613 22.9226 16.5265L24.1051 7.81406C22.5284 7.69019 20.4787 7.6076 18.902 7.6076C8.69291 7.6076 2.22846 12.5625 0.848855 22.844C-0.530753 33.1255 4.63292 38.0391 14.842 38.0391Z" fill="#FF1923"/>
+<path d="M25.5965 37.4197H44.3592L45.4628 29.1615H35.2143L38.013 8.26826H29.4988L25.5965 37.4197Z" fill="#FF1923"/>
+<path d="M48.425 37.4197H56.9391L60.8415 8.26826H52.3273L48.425 37.4197Z" fill="#FF1923"/>
+<path d="M77.7019 38.0391C79.2786 38.0391 81.4466 37.9152 83.0627 37.7913L84.2058 29.0789C82.5897 29.2441 80.4612 29.4093 78.845 29.4093C73.9179 29.4093 71.7105 28.088 72.3806 22.844C73.0901 17.6 75.6917 16.2374 80.6188 16.2374C82.2349 16.2374 84.1664 16.3613 85.7825 16.5265L86.965 7.81406C85.3883 7.69019 83.3386 7.6076 81.7619 7.6076C71.5528 7.6076 65.0884 12.5625 63.7088 22.844C62.3292 33.1255 67.4928 38.0391 77.7019 38.0391Z" fill="#FF1923"/>
+<path d="M106.076 37.4197H115.812L107.377 22.3898L119.714 8.26826H109.978L101.07 18.7149H99.4539L100.873 8.26826H92.3587L88.4564 37.4197H96.9706L98.429 26.395H100.124L106.076 37.4197Z" fill="#FF1923"/>
+<path d="M139.488 8.26826H128.845L114.813 37.4197H123.918L126.204 32.2996H135.665L136.611 37.4197H145.755L139.488 8.26826ZM132.945 17.4349L134.285 24.7434H129.634L132.945 17.4349Z" fill="#FF1923"/>
+<path d="M174.72 28.9551C175.075 26.0234 174.168 23.9176 172.079 22.5137C173.734 21.1511 174.72 19.2517 175.075 16.8155C175.863 10.9522 171.448 8.26826 163.17 8.26826H152.37L148.468 37.4197H160.53C168.807 37.4197 173.931 34.7358 174.72 28.9551ZM166.087 28.0054C165.851 29.7396 164.708 29.9873 161.594 29.9873H157.967L158.48 26.0647H162.146C165.26 26.0647 166.324 26.3124 166.087 28.0054ZM166.363 17.6826C166.127 19.3756 164.984 19.6646 161.87 19.6646H159.347L159.899 15.7006H162.422C165.536 15.7006 166.6 15.9484 166.363 17.6826Z" fill="#FF1923"/>
+<path d="M178.146 37.4197H196.909L198.013 29.1615H187.764L190.563 8.26826H182.049L178.146 37.4197Z" fill="#FF1923"/>
+<path d="M200.896 37.4197H220.447L221.551 29.1615H210.514L210.869 26.3537H216.15L217.136 18.9213H211.893L212.209 16.5265H222.851L223.955 8.26826H204.798L200.896 37.4197Z" fill="#FF1923"/>
+</svg>`;
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  const cw = document.querySelector('#uploadScreen .corner-wordmark');
+  if(cw) cw.innerHTML = CLICKABLE_WORDMARK_SVG;
+});
+
+/* =========================================================================
+   CONFIG — модели используются только на сервере (server.js). Ключ здесь
+   не хранится и не может быть виден в браузере — это принципиально.
+   Пока сервер не запущен или ключ не задан в .env, AI-шаги используют
+   аккуратные текстовые заглушки/кодовые эвристики.
+   ========================================================================= */
+const CONFIG = {
+  API_BASE: '', // пусто = запросы идут на тот же origin, где открыта страница (localhost:3000/api/...)
+};
+
+/* Промпты по механике генерации (см. описание экранов). Хранятся как есть —
+   технические уточнения формата ответа добавляются в generate*-функциях
+   при самом вызове, а не здесь, чтобы не трогать смысл ваших формулировок. */
+const PROMPTS = {
+  legend: `Analyze the uploaded logo and write a short brand concept description, following this structure: 1. First sentence: explain which words/concepts the logo name is made of (if it's a portmanteau/blend of two words, specify both), and what this symbolizes in one phrase (bold the key idea). 2. Second sentence/paragraph: describe how the logo reflects the brand's/ agency's character — its approach, target audience, and the impression it creates. Bold 2-3 key words describing the style (e.g. "modernity," "dynamic energy," "reliability" — depending on the visual). Tone: professional, concise, like text for a brand guideline presentation slide. Length: 2 short paragraphs, no more than 40 words each.`,
+
+  paletteExtract: `Analyze the uploaded logo/image and extract its color palette, like using a color picker (eyedropper) tool. For each distinct color used in the logo: 1. Identify the exact HEX code 2. List them in order of prominence (most dominant color first) Present the result as a clean color palette breakdown — swatch description + HEX code for each color, formatted like a brand style guide slide (e.g. "Color Palette" section with labeled swatches). Include only the actual colors present in the logo — no additional or suggested colors, just what's visually there.`,
+
+  extractSymbol: `Using the uploaded logo, create an "app icon" style symbol variation set.
+Steps:
+1. Identify whether the uploaded logo already contains a standalone graphic symbol.
+   - If it does, use that symbol exactly as it appears.
+   - If the logo is a wordmark only, extract a single recognizable symbol directly from the existing lettering.
+   - The extracted symbol must consist only of elements already present in the logo.
+   - Do not invent a new logo, icon, emblem, badge, abstract graphic, or brand mark.
+2. When extracting a symbol from a wordmark, use the following priority:
+   - the most distinctive stylized letter,
+   - an existing ligature,
+   - a monogram created only by combining or cropping existing letters from the logo without altering them,
+   - another recognizable fragment of the original lettering.
+   Never create new shapes, modify letterforms, or introduce new graphic elements.
+3. Preserve the original geometry, proportions, stroke weight, spacing, curves, angles, and stylistic details of the extracted symbol.
+   Do not simplify, stylize, redraw, reinterpret, modernize, or redesign it in any way.
+4. Identify every color already present in the uploaded logo, including background colors and foreground/text colors.
+5. Place the extracted symbol inside a rounded-square app icon (similar to iOS/Android app icons).
+   Keep the symbol centered with consistent padding and corner radius across all versions.
+6. Generate one icon variation for each color found in the logo, using that color as the background and another existing logo color as the symbol color to ensure strong contrast and readability.
+7. Keep the symbol identical in every version.
+   The only differences between versions should be the background and symbol colors.
+8. Use ONLY the colors already present in the uploaded logo.
+   Do not introduce any new colors, gradients, shadows, textures, outlines, decorative elements, lighting effects, or 3D effects.
+Layout:
+Display all icon variations in a single horizontal row on a plain neutral background, labeled "Symbol", similar to a professional brand identity guideline.
+Important:
+The final app icon must be a faithful adaptation of the original logo—not a redesign.
+Someone familiar with the original logo should immediately recognize the extracted symbol as belonging to that logo.`,
+
+  pattern: `Using the uploaded symbol, create a professional "Patterns" brand guideline section.
+Steps:
+1. Use the uploaded symbol exactly as it appears.
+   - Do not redraw, simplify, modify, reinterpret, or replace it.
+   - Do not create a new symbol.
+2. Build seamless repeating brand patterns using ONLY the uploaded symbol.
+3. The symbol itself must remain completely unchanged.
+   You may vary only:
+   - spacing,
+   - scale,
+   - rotation (0°, 90°, 180°, 270°),
+   - repetition,
+   - layout.
+4. Do not introduce any additional shapes, icons, illustrations, decorative graphics, textures, or effects.
+5. Use ONLY the colors already present in the uploaded symbol.
+   Generate one pattern variation for each background/foreground color combination found in the symbol.
+6. Keep the visual style consistent across all pattern variations.
+   Only the color combinations and arrangement of the repeated symbol may change.
+7. Do not introduce new colors, gradients, shadows, outlines, lighting effects, transparency, or 3D effects.
+Layout:
+Display all pattern variations in a clean 2×3 grid of rounded rectangles on a neutral background, labeled "Patterns", similar to a professional brand identity guideline.
+Important:
+The uploaded symbol is the ONLY repeating element allowed in the patterns.
+The final patterns should clearly belong to the same brand and look suitable for professional brand guidelines.`,
+
+  banner: `Using the uploaded logo, create a set of brand promotional banners.
+Steps:
+1. Extract the core graphic symbol from the logo and render it as a
+   bold 3D-style object (glossy, with highlights, shadows, and depth —
+   floating/tilted at a dynamic angle, with small decorative sphere
+   accents nearby for visual energy).
+2. Identify all the colors already present in the uploaded logo.
+3. Add the brand wordmark/logo in a top corner of each banner (smaller size).
+4. Come up with a short, punchy brand tagline/slogan (2-4 words, bold and
+   energetic, matching the brand name and vibe — e.g. reflecting themes
+   of creativity, speed, impact, or momentum). Display it in large
+   condensed sans-serif type as the main text element, positioned
+   alongside the 3D symbol.
+5. Create 4 banner variations in different formats and color combinations,
+   using only the logo's own colors as backgrounds and text colors
+   (rotate through the palette so each banner has a different dominant
+   background color, contrasted with the 3D symbol and text).
+   Formats:
+   - Wide landscape banner (e.g. 1200x400)
+   - Wide landscape banner, alternate color
+   - Square/vertical banner with stacked layout
+   - Tall vertical/story format banner
+6. Keep the same tagline, typography, symbol style, and layout logic
+   consistent across all versions — only background color, symbol color,
+   and format change.
+Layout: display all 4 banners together on a plain background, labeled
+"Banners" — like a brand style guide slide.
+Use ONLY the colors that already exist in the uploaded logo — do not
+introduce new colors.`,
+
+  landingExample: `Using the uploaded banner, create a landing page hero section mockup as a single flat image (JPG-style visual mockup, not functional code).
+
+The uploaded banner is the primary visual asset and must remain the dominant element of the design.
+
+Steps:
+
+1. Use the uploaded banner exactly as provided.
+   - Do not redesign, recreate, crop, or reinterpret the banner.
+   - Preserve its composition, typography, colors, logo, 3D graphics, and overall visual style.
+   - The uploaded banner should occupy approximately 60–70% of the hero section and remain the main focal point.
+
+2. Identify all colors already present in the uploaded banner.
+   Use ONLY these colors throughout the landing page.
+
+3. Build the landing page with these sections, top to bottom:
+
+   a) Top navigation bar:
+      - logo on the left,
+      - 4–6 navigation links in the center,
+      - language selector,
+      - 2 small icon buttons,
+      - one prominent pill-shaped call-to-action button on the right.
+      Use one of the brand colors for the navigation background.
+
+   b) Hero section:
+      - place the uploaded banner as the main hero element,
+      - do not modify or recreate the banner,
+      - keep generous white space around it,
+      - let the banner dominate the visual hierarchy.
+
+   c) Supporting text below the hero:
+      - one short sentence describing the brand or service,
+      - highlight 1–2 keywords using an existing brand accent color.
+
+   d) Showcase section:
+      - four rounded image placeholder cards,
+      - each card includes a small circular brand badge,
+      - left and right carousel navigation arrows using brand colors.
+
+4. Match the typography, spacing, border radius, alignment, and overall design language of the uploaded banner.
+
+5. Keep the entire landing page visually consistent with the uploaded banner.
+
+6. Use ONLY the colors already present in the uploaded banner.
+   Do not introduce new colors, gradients, shadows, textures, outlines, lighting effects, transparency, or 3D elements beyond those already contained in the uploaded banner.
+
+Style:
+Modern, premium, clean, minimal, high-contrast, energetic, and consistent with the uploaded banner.
+
+Output:
+A single flat landing page mockup labeled "Example", presented like a professional brand guideline showing how the uploaded banner is applied to a real website.
+
+Important:
+Do not create a new hero banner.
+Build the landing page around the uploaded banner.
+The uploaded banner must remain immediately recognizable as the central visual element.`,
+};
+
+/* =========================================================================
+   Вызовы идут на СВОЙ backend (server.js), а не на api.openai.com напрямую.
+   Ключ живёт только в .env на сервере — в браузере его больше нет вообще.
+   Нет CORS, потому что запрос идёт на тот же origin, что и сама страница.
+   ========================================================================= */
+async function callOpenAIText(systemPrompt, userContent){
+  const res = await fetch(`${CONFIG.API_BASE}/api/text`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ systemPrompt: systemPrompt || '', userContent })
+  });
+  const data = await res.json();
+  if(!res.ok) throw new Error('AI text request failed ('+res.status+'): ' + JSON.stringify(data.error || data));
+  return data.text || '';
+}
+
+async function callOpenAIImage(prompt, referenceImageDataUrl, size, opts){
+  const { model, fallbackSize } = opts || {};
+  const res = await fetch(`${CONFIG.API_BASE}/api/image`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      prompt,
+      referenceImageDataUrl: referenceImageDataUrl || null,
+      size: size || '1024x1024',
+      model: model || null,
+      fallbackSize: fallbackSize || null,
+    })
+  });
+  const data = await res.json();
+  if(!res.ok) throw new Error('AI image request failed ('+res.status+'): ' + JSON.stringify(data.error || data));
+  return data.dataUrl || null;
+}
+
+/* Собирает multimodal-контент (текст + картинка) для vision-запросов к /api/text */
+function visionContent(text, imageDataUrl){
+  return [
+    { type:'text', text },
+    { type:'image_url', image_url:{ url: imageDataUrl } }
+  ];
+}
+
+/* =========================================================================
+   STATE
+   ========================================================================= */
+const state = {
+  brandName:'',
+  logoFile:null, logoDataUrl:'', logoType:'', logoDataUrlForAI:'', logoDataUrlExport:'',
+  symbolFile:null, symbolDataUrl:'',
+  hasSymbol:true,
+  creativeFile:null, creativeDataUrl:'',
+  bannerLanguage:'English',
+  colors:[], generatedColors:[], extractedColorsBase:[],
+  legendHtml:'', symbolBbox:null, symbolCropDataUrl:'',
+  symbolImages:[], patternImages:[], bannerImages:[], bannerTagline:'', exampleImage:'',
+  year: new Date().getFullYear(),
+};
+
+/* =========================================================================
+   UPLOAD SCREEN LOGIC
+   ========================================================================= */
+const logoDropzone = document.getElementById('logoDropzone');
+const logoFileInput = document.getElementById('logoFileInput');
+const logoDzContent = document.getElementById('logoDzContent');
+const logoError = document.getElementById('logoError');
+
+const creativeDropzone = document.getElementById('creativeDropzone');
+const creativeFileInput = document.getElementById('creativeFileInput');
+const creativeDzContent = document.getElementById('creativeDzContent');
+const creativeError = document.getElementById('creativeError');
+
+const bannerLangSelect = document.getElementById('bannerLangSelect');
+
+const brandNameInput = document.getElementById('brandNameInput');
+const generateBtn = document.getElementById('generateBtn');
+
+const ALLOWED_EXT = ['svg','png','jpg','jpeg'];
+const CREATIVE_ALLOWED_EXT = ['png','jpg','jpeg'];
+
+function getExt(filename){ return filename.split('.').pop().toLowerCase(); }
+
+function setupDropzone(zoneEl, inputEl, errorEl, allowedExt, onValidFile){
+  zoneEl.addEventListener('click', ()=> inputEl.click());
+  zoneEl.addEventListener('dragover', e=>{ e.preventDefault(); zoneEl.classList.add('dragover'); });
+  zoneEl.addEventListener('dragleave', ()=> zoneEl.classList.remove('dragover'));
+  zoneEl.addEventListener('drop', e=>{
+    e.preventDefault(); zoneEl.classList.remove('dragover');
+    if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+  inputEl.addEventListener('change', e=>{
+    if(e.target.files.length) handleFile(e.target.files[0]);
+  });
+  function handleFile(file){
+    const ext = getExt(file.name);
+    if(!allowedExt.includes(ext)){
+      if(errorEl) errorEl.style.display='block';
+      return;
+    }
+    if(errorEl) errorEl.style.display='none';
+    onValidFile(file, ext);
+  }
+}
+
+setupDropzone(logoDropzone, logoFileInput, logoError, ALLOWED_EXT, (file, ext)=>{
+  state.logoFile = file; state.logoType = ext;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    state.logoDataUrl = e.target.result;
+    logoDzContent.innerHTML = `
+      <div class="dz-preview">
+        <img src="${state.logoDataUrl}" alt="logo preview">
+        <span class="dz-filename">${file.name}</span>
+      </div>`;
+    validateForm();
+  };
+  reader.readAsDataURL(file);
+});
+
+/* Референс-креатив (баннер/реклама) — опционально. Если загружен, его цвета
+   при генерации палитры получают приоритет над цветами самого логотипа. */
+setupDropzone(creativeDropzone, creativeFileInput, creativeError, CREATIVE_ALLOWED_EXT, (file, ext)=>{
+  state.creativeFile = file;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    state.creativeDataUrl = e.target.result;
+    creativeDzContent.innerHTML = `
+      <div class="dz-preview">
+        <img src="${state.creativeDataUrl}" alt="creative preview">
+        <span class="dz-filename">${file.name}</span>
+      </div>`;
+  };
+  reader.readAsDataURL(file);
+});
+
+brandNameInput.addEventListener('input', validateForm);
+function validateForm(){
+  generateBtn.disabled = !(state.logoDataUrl && brandNameInput.value.trim().length>0);
+}
+
+generateBtn.addEventListener('click', async ()=>{
+  state.brandName = brandNameInput.value.trim();
+  state.bannerLanguage = bannerLangSelect.value || 'English';
+  document.getElementById('uploadScreen').style.display='none';
+  document.getElementById('loadingScreen').style.display='flex';
+  await buildPresentation();
+});
+
+document.getElementById('restartBtn').addEventListener('click', ()=> location.reload());
+
+/* =========================================================================
+   COLOR EXTRACTION — код, без AI ("пипетка")
+   ========================================================================= */
+function rgbToHex([r,g,b]){
+  return '#' + [r,g,b].map(v=>Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('').toUpperCase();
+}
+function hexToRgb(hex){
+  const h = hex.replace('#','');
+  return [parseInt(h.substr(0,2),16), parseInt(h.substr(2,2),16), parseInt(h.substr(4,2),16)];
+}
+function colorDist(a,b){
+  return Math.sqrt((a[0]-b[0])**2 + (a[1]-b[1])**2 + (a[2]-b[2])**2);
+}
+function rgbToHsl([r,g,b]){
+  r/=255; g/=255; b/=255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  let h,s,l=(max+min)/2;
+  if(max===min){ h=0; s=0; }
+  else{
+    const d=max-min;
+    s = l>0.5 ? d/(2-max-min) : d/(max+min);
+    if(max===r) h=((g-b)/d + (g<b?6:0));
+    else if(max===g) h=(b-r)/d+2;
+    else h=(r-g)/d+4;
+    h*=60;
+  }
+  return [h,s,l];
+}
+function hslToRgb(h,s,l){
+  h/=360;
+  function hue2rgb(p,q,t){
+    if(t<0)t+=1; if(t>1)t-=1;
+    if(t<1/6) return p+(q-p)*6*t;
+    if(t<1/2) return q;
+    if(t<2/3) return p+(q-p)*(2/3-t)*6;
+    return p;
+  }
+  let r,g,b;
+  if(s===0){ r=g=b=l; }
+  else{
+    const q = l<0.5 ? l*(1+s) : l+s-l*s;
+    const p = 2*l-q;
+    r=hue2rgb(p,q,h+1/3); g=hue2rgb(p,q,h); b=hue2rgb(p,q,h-1/3);
+  }
+  return [Math.round(r*255),Math.round(g*255),Math.round(b*255)];
+}
+
+/* Растеризация лого В ЕГО СОБСТВЕННЫХ пропорциях (без квадратной подложки —
+   в отличие от ensurePngDataUrl выше), чтобы проценты bbox от нейросети
+   (x,y,w,h от 0 до 1) совпадали с реальными координатами на картинке. */
+function rasterizeToCanvas(dataUrl, maxSize=1600){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const iw = img.naturalWidth || img.width || 1;
+      const ih = img.naturalHeight || img.height || 1;
+      // SVGs are vector — their "natural" size is often just a small default
+      // (e.g. 300x150) unrelated to actual visual detail, and rendering to a
+      // canvas at that size bakes in a blurry, low-res bitmap. Since a
+      // vector source has no real resolution ceiling, always rasterize SVGs
+      // AT maxSize (scale up as needed) instead of only ever scaling down.
+      // Raster sources (PNG/JPEG) are capped at their own resolution to
+      // avoid pixelating an upscale.
+      const isVector = dataUrl.startsWith('data:image/svg');
+      const scale = isVector ? (maxSize / Math.max(iw, ih)) : (Math.min(1, maxSize / Math.max(iw, ih)) || 1);
+      const w = Math.max(1, Math.round(iw*scale));
+      const h = Math.max(1, Math.round(ih*scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0,0,w,h);
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve({canvas, width:w, height:h});
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
+/* Вырезает область [x,y,w,h] (доли 0..1 от размеров канваса) как отдельный
+   PNG dataURL — это НАСТОЯЩИЙ кусок загруженного лого, не сгенерированная
+   нейросетью картинка. */
+function cropRegionToDataUrl(canvas, xPct, yPct, wPct, hPct){
+  const sx = Math.round(canvas.width * xPct);
+  const sy = Math.round(canvas.height * yPct);
+  const sw = Math.max(1, Math.round(canvas.width * wPct));
+  const sh = Math.max(1, Math.round(canvas.height * hPct));
+  const out = document.createElement('canvas');
+  out.width = sw; out.height = sh;
+  const ctx = out.getContext('2d');
+  ctx.clearRect(0,0,sw,sh);
+  ctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+  return out.toDataURL('image/png');
+}
+
+/* Строит настоящий "символ" — кадр из реального лого (по bbox от AI, либо
+   по разумному дефолту, если анализ не сработал), НЕ сгенерированную с нуля
+   картинку. */
+async function buildSymbolCrop(){
+  try{
+    const {canvas} = await rasterizeToCanvas(state.logoDataUrl, 1600);
+    const bbox = state.symbolBbox || {x:0.06, y:0.18, w:0.34, h:0.34};
+    return cropRegionToDataUrl(canvas, bbox.x, bbox.y, bbox.w, bbox.h);
+  }catch(e){
+    console.error('buildSymbolCrop failed', e);
+    return state.logoDataUrl;
+  }
+}
+
+/* OpenAI Images API умеет отдавать картинку только в 3 фиксированных
+   пропорциях (1024x1024 / 1536x1024 / 1024x1536) — произвольный WxH
+   (848x425, 320x770 и т.д.) напрямую заказать нельзя. Поэтому после
+   получения картинки мы САМИ, на canvas, обрезаем её по центру до нужных
+   пропорций и уменьшаем до ТОЧНОГО целевого размера в пикселях — это
+   настоящий ресайз (без растяжения, пропорции сохраняются), а не CSS-трюк:
+   на выходе реальный файл ровно WxH. */
+function cropCoverToExactSize(dataUrl, targetW, targetH){
+  return new Promise((resolve, reject)=>{
+    if(!dataUrl){ reject(new Error('no dataUrl to crop')); return; }
+    const img = new Image();
+    img.onload = ()=>{
+      try{
+        const targetRatio = targetW / targetH;
+        const srcRatio = img.width / img.height;
+        let sx, sy, sw, sh;
+        if(srcRatio > targetRatio){
+          // источник шире цели — обрезаем по бокам
+          sh = img.height;
+          sw = sh * targetRatio;
+          sy = 0;
+          sx = (img.width - sw) / 2;
+        } else {
+          // источник выше цели — обрезаем сверху/снизу
+          sw = img.width;
+          sh = sw / targetRatio;
+          sx = 0;
+          sy = (img.height - sh) / 2;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = targetW;
+        canvas.height = targetH;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH);
+        resolve(canvas.toDataURL('image/png'));
+      }catch(e){ reject(e); }
+    };
+    img.onerror = ()=> reject(new Error('image failed to load for cropping'));
+    img.src = dataUrl;
+  });
+}
+
+/* Раньше промпт просто просил "держать контент подальше от краёв" — этого
+   было мало: модель не знает, СКОЛЬКО именно будет обрезано, и часто кладёт
+   текст на всю ширину/высоту канваса, из-за чего он реально режется (как на
+   скриншотах с обрезанными "Point2Web"/"Accelerate Your Impact"). Вместо
+   расплывчатого пожелания считаем ТОЧНЫЙ процент, который переживёт кроп
+   (по той же математике, что и cropCoverToExactSize), и прямо говорим
+   модели цифры: "останется только центральные N% по такой-то оси". */
+function computeCropSafeZoneNote(sourceSize, targetW, targetH){
+  const [sw0, sh0] = sourceSize.split('x').map(Number);
+  const srcRatio = sw0 / sh0;
+  const targetRatio = targetW / targetH;
+  if(Math.abs(srcRatio - targetRatio) < 0.01){
+    return 'This image will NOT be cropped afterward — the requested canvas ratio already matches the final frame exactly, so you can use the full canvas edge-to-edge.';
+  }
+  if(srcRatio > targetRatio){
+    const keepPct = Math.round((targetRatio / srcRatio) * 100);
+    const trimEachSide = Math.round((100 - keepPct) / 2);
+    return `IMPORTANT — this image will be CROPPED afterward to keep only the center ${keepPct}% of its WIDTH (about ${trimEachSide}% trimmed off the left edge and ${trimEachSide}% off the right edge). Design the ENTIRE composition — 3D symbol, wordmark, and tagline, and both color blocks — so it reads correctly within that center ${keepPct}%-wide column. Leave the outer left/right margins as plain, empty background color only — absolutely no text or graphic elements there, they will be cut off.`;
+  }
+  const keepPct = Math.round((srcRatio / targetRatio) * 100);
+  const trimEachSide = Math.round((100 - keepPct) / 2);
+  return `IMPORTANT — this image will be CROPPED afterward to keep only the center ${keepPct}% of its HEIGHT (about ${trimEachSide}% trimmed off the top edge and ${trimEachSide}% off the bottom edge). Design the ENTIRE composition — 3D symbol, wordmark, and tagline, and both color blocks — compactly, so it fits well within that center ${keepPct}%-tall horizontal band. Leave the outer top/bottom margins as plain, empty background color only — absolutely no text or graphic elements there, they will be cut off.`;
+}
+
+
+/* OpenAI Images API не принимает SVG как референс — только PNG/JPEG/WEBP.
+   Растеризуем на canvas перед отправкой. Для растровых логотипов просто
+   возвращаем исходный dataURL без изменений. */
+/* html2canvas (используется при экспорте в PDF) ненадёжно определяет
+   intrinsic-размер SVG data-URI — из-за этого лого в PDF либо растягивается,
+   либо вообще не рисуется. ensurePngDataUrl() для этого не годится: она
+   всегда кладёт лого на квадратный canvas с паддингом (это нужно для
+   AI-запросов, но ломает пропорции при обычном показе). Эта функция вместо
+   этого растеризует лого В ЕГО РЕАЛЬНЫХ пропорциях (rasterizeToCanvas) —
+   используется только для подмены <img> перед html2canvas, на экране
+   по-прежнему показывается исходный (более резкий) SVG. */
+async function buildLogoExportPng(){
+  try{
+    const {canvas} = await rasterizeToCanvas(state.logoDataUrl, 1800);
+    return canvas.toDataURL('image/png');
+  }catch(e){
+    console.error('buildLogoExportPng failed', e);
+    return state.logoDataUrl;
+  }
+}
+
+function ensurePngDataUrl(dataUrl, size=1024){
+  return new Promise(resolve=>{
+    if(!dataUrl || !dataUrl.startsWith('data:image/svg')){
+      resolve(dataUrl);
+      return;
+    }
+    const img = new Image();
+    img.onload = ()=>{
+      const canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0,0,size,size);
+      const scale = Math.min(size/img.width, size/img.height) * 0.86;
+      const w = img.width*scale, h = img.height*scale;
+      ctx.drawImage(img, (size-w)/2, (size-h)/2, w, h);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = ()=> resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+function extractColorsFromRaster(dataUrl, maxColors=6){
+  return new Promise(resolve=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const size=80;
+      const canvas = document.createElement('canvas');
+      canvas.width=size; canvas.height=size;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img,0,0,size,size);
+      let data;
+      try{ data = ctx.getImageData(0,0,size,size).data; }
+      catch(e){ resolve([]); return; }
+      const counts = new Map();
+      for(let i=0;i<data.length;i+=4){
+        const a = data[i+3]; if(a<40) continue;
+        const r=data[i], g=data[i+1], b=data[i+2];
+        const key = [Math.round(r/24)*24, Math.round(g/24)*24, Math.round(b/24)*24].join(',');
+        counts.set(key, (counts.get(key)||0)+1);
+      }
+      const sorted = [...counts.entries()].sort((a,b)=>b[1]-a[1]).map(([k])=>k.split(',').map(Number));
+      const result=[];
+      for(const c of sorted){
+        if(result.some(r=>colorDist(r,c)<38)) continue;
+        result.push(c);
+        if(result.length>=maxColors) break;
+      }
+      resolve(result.map(rgbToHex));
+    };
+    img.onerror = ()=>resolve([]);
+    img.src = dataUrl;
+  });
+}
+
+/* Извлечение цветов кодом из SVG-разметки (regex по fill/stroke) */
+function extractColorsFromSvg(svgText, maxColors=6){
+  const hexMatches = [...svgText.matchAll(/#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/g)].map(m=>{
+    let h = m[1];
+    if(h.length===3) h = h.split('').map(c=>c+c).join('');
+    return '#'+h.toUpperCase();
+  });
+  const rgbMatches = [...svgText.matchAll(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/g)]
+    .map(m=>rgbToHex([+m[1],+m[2],+m[3]]));
+  const all = [...hexMatches, ...rgbMatches].filter(h=>h!=='#FFFFFF' || hexMatches.length<2);
+  const seen=[];
+  for(const h of all){
+    const rgb = hexToRgb(h);
+    if(seen.some(s=>colorDist(hexToRgb(s), rgb)<25)) continue;
+    seen.push(h);
+    if(seen.length>=maxColors) break;
+  }
+  return seen;
+}
+
+/* Правило палитры (слайд "Color Palette"):
+   - если в логотипе один цвет — берём его + 4 случайных, но гармонирующих с
+     ним цвета;
+   - если цветов пипеткой найдено 2 или 3 — оставляем их и добираем случайными
+     гармоничными цветами до 5;
+   - если найдено 4+ — берём 5 самых доминантных (и ничего не добавляем);
+   - итог всегда РОВНО 5 цветов.
+   "Гармоничные" = цвета на гармонических интервалах цветового круга
+   (аналоговые/триадные/комплементарные ±джиттер) от одного из уже
+   имеющихся цветов, со случайной, но со вкусом подобранной
+   насыщенностью/светлотой — то есть каждый раз чуть по-разному, но не мимо. */
+const HARMONY_HUE_OFFSETS = [30,45,60,90,120,150,180,210,240,270,300,315,330];
+function randomHarmoniousColor(baseColors){
+  const base = baseColors[Math.floor(Math.random()*baseColors.length)];
+  const [h,s,l] = rgbToHsl(hexToRgb(base));
+  const off = HARMONY_HUE_OFFSETS[Math.floor(Math.random()*HARMONY_HUE_OFFSETS.length)] * (Math.random()<0.5?1:-1);
+  const newHue = (h + off + 360) % 360;
+  const newSat = Math.min(0.92, Math.max(0.38, s + (Math.random()*0.3 - 0.15)));
+  const newLight = Math.min(0.74, Math.max(0.22, l + (Math.random()*0.3 - 0.15)));
+  return rgbToHex(hslToRgb(newHue, newSat, newLight));
+}
+function buildHarmoniousPalette(extractedColors, target=5){
+  const base = (extractedColors.length ? extractedColors : ['#002D95']).slice(0, target);
+  const result = [...base];
+  const generated = [];
+  const harmonyBase = extractedColors.length ? extractedColors : base;
+  let guard = 0;
+  while(result.length < target && guard < 80){
+    guard++;
+    const candidate = randomHarmoniousColor(harmonyBase);
+    const candRgb = hexToRgb(candidate);
+    if(result.some(c=>colorDist(hexToRgb(c), candRgb) < 30)) continue;
+    result.push(candidate);
+    generated.push(candidate);
+  }
+  return {colors:result, generated};
+}
+
+/* =========================================================================
+   AI-ГЕНЕРАЦИЯ. При отсутствии/невалидности ключа каждая функция сама
+   уходит в try/catch и откатывается на заглушку — презентация не падает.
+   ========================================================================= */
+/* Один vision-вызов вместо двух: легенда + палитра + короткое "ядро" символа
+   за один проход по картинке — экономит целый повторный аплоад лого. */
+const SYMBOL_BBOX_TASK_PROMPT = `Find the exact region INSIDE the uploaded logo image
+that works best as a standalone icon/symbol on its own — this must be an
+actual piece of the real logo you were given (e.g. its first letter, a few
+adjacent letters, or an abstract mark that's already part of the artwork),
+never something invented from scratch. It does not have to be a single
+capital letter — lowercase, two letters, a ligature, or an abstract shape
+are all fine, whatever piece of the actual logo looks the most striking as
+a compact standalone mark.
+This crop will be displayed as an app-icon-style square tile, so:
+- Prefer a bounding box that is roughly SQUARE (width close to height) —
+  avoid a crop that is a long thin sliver in either direction.
+- Center the chosen piece well within the box, with a small even margin on
+  all four sides — don't let it touch or bleed off any edge.
+- Don't let an unrelated neighboring letter or shape sneak in only
+  partially cut off at the edge of the box; the box should contain ONE
+  clean, complete, self-contained mark.
+Return the crop as this tight, centered, near-square bounding box, as four
+numbers separated by commas: left,top,width,height — each a fraction from
+0 to 1 of the full image's width/height (e.g. 0.06,0.10,0.30,0.32).
+Numbers only, nothing else.`;
+
+function parseBboxNumbers(str){
+  const nums = ((str || '').match(/[\d.]+/g) || []).map(Number);
+  if(nums.length < 4 || nums.slice(0,4).some(n=>isNaN(n))) return null;
+  let [x,y,w,h] = nums;
+  x = Math.min(0.9, Math.max(0, x));
+  y = Math.min(0.9, Math.max(0, y));
+  w = Math.min(1, Math.max(0.05, w));
+  h = Math.min(1, Math.max(0.05, h));
+  if(x + w > 1) w = 1 - x;
+  if(y + h > 1) h = 1 - y;
+  return {x, y, w, h};
+}
+
+/* Отдельный (лёгкий) запрос за bbox символа — используется кнопкой
+   "перегенерировать" на слайде Symbol, чтобы не пересчитывать легенду и
+   палитру заново. */
+async function requestSymbolBbox(logoDataUrl, avoidPrevious){
+  const avoidNote = avoidPrevious
+    ? ` Pick a genuinely different piece of the logo than the most obvious "first letter" choice, if a good alternative exists — it must still be a real element of the same artwork.`
+    : '';
+  const prompt = `${SYMBOL_BBOX_TASK_PROMPT}${avoidNote}\n\nReturn ONLY the four numbers separated by commas, nothing else.`;
+  const text = await callOpenAIText(
+    'You are a senior brand designer identifying a crop region in a logo image. Follow the requested output format exactly.',
+    visionContent(prompt, logoDataUrl)
+  );
+  return parseBboxNumbers(text);
+}
+
+async function analyzeBrand(brandName, logoDataUrl){
+  const prompt = `Brand name: ${brandName}.
+
+TASK 1 — Legend. ${PROMPTS.legend}
+Output as exactly two HTML <p> paragraphs, with 2-3 key words wrapped in <b> tags.
+
+TASK 2 — Color palette. ${PROMPTS.paletteExtract}
+Output as hex codes only (#RRGGBB), one per line, most dominant first.
+
+TASK 3 — Symbol crop. ${SYMBOL_BBOX_TASK_PROMPT}
+
+Return your answer in exactly this format, markers on their own lines, nothing else:
+###LEGEND###
+<two <p> paragraphs>
+###COLORS###
+<hex codes>
+###SYMBOL###
+<left,top,width,height>`;
+  try{
+    const text = await callOpenAIText(
+      'You are a senior brand designer analyzing a logo for a brand guideline deck. Follow the requested output format exactly.',
+      visionContent(prompt, logoDataUrl)
+    );
+    const legendM = /###LEGEND###([\s\S]*?)###COLORS###/i.exec(text);
+    const colorsM = /###COLORS###([\s\S]*?)###SYMBOL###/i.exec(text);
+    const symbolM = /###SYMBOL###([\s\S]*)$/i.exec(text);
+    const legendHtml = legendM ? legendM[1].trim() : '';
+    const hexes = [...(colorsM ? colorsM[1] : '').matchAll(/#([0-9a-fA-F]{6})/g)].map(m=>'#'+m[1].toUpperCase());
+    const seen = []; hexes.forEach(h=>{ if(!seen.includes(h)) seen.push(h); });
+    const symbolBbox = symbolM ? parseBboxNumbers(symbolM[1]) : null;
+    return { legendHtml, colors: seen, symbolBbox };
+  }catch(e){
+    console.error('analyzeBrand failed', e);
+    return { legendHtml:'', colors: [], symbolBbox: null };
+  }
+}
+
+function fallbackLegendHtml(brandName, logoDataUrl){
+  return `<p>[AI copy will appear here once a real key is connected — the model will look at the logo and describe what it symbolizes.]</p>
+    <p>This is a placeholder right now: either no key is set in <b>.env</b>, or the OpenAI request failed.</p>`;
+}
+
+/* Слайд 5 — символ теперь НЕ генерируется нейросетью "из головы": это
+   реальный кадр из загруженного лого (buildSymbolCrop), перекрашенный через
+   CSS mask в цвета палитры — те же 5 цветов, что и на слайде "Color
+   Palette"/"Color Logo Variations", чтобы всё было в одном ключе. */
+/* Слайд 5 — сначала пробуем реальную AI-генерацию (state.symbolImages, см.
+   generateSymbolImages), а если для какого-то цвета генерация не удалась —
+   на этот конкретный тайл подставляем локальный CSS-mask (реальный кроп
+   символа из лого, перекрашенный в fg поверх bg), чтобы слайд никогда не
+   разваливался целиком из-за одного неудачного запроса к API. */
+function buildSymbolTiles(){
+  const colors = state.colors.length ? state.colors : ['#002D95','#FFFFFF','#000000','#FF559C','#F8FF20'];
+  const src = state.symbolCropDataUrl || state.logoDataUrl;
+  const maskStyle = hex => `background:${hex};-webkit-mask-image:url('${src}');mask-image:url('${src}');-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain;`;
+  const aiImages = state.symbolImages || [];
+  return colors.slice(0,5).map((bg,i)=>{
+    const fg = pickContrastColor(bg, colors);
+    const border = bg.toUpperCase()==='#FFFFFF' ? 'border:1px solid #eee;' : '';
+    const ai = aiImages[i];
+    const inner = ai
+      ? `<img src="${ai}">`
+      : `<div class="symtile-mark" data-mask-src="${src}" data-mask-fg="${fg}" style="${maskStyle(fg)}"></div>`;
+    return `<div class="symtile" style="background:${bg};${border}">${inner}</div>`;
+  }).join('');
+}
+
+/* Общий помощник: из палитры выбираем цвет, контрастный к bg — используется
+   на слайдах 4 (Color Logo Variations), 5 (Symbol) и 8 (Example). Выбор
+   слегка случайный (взвешенно по контрасту) — чтобы кнопка "перегенерировать"
+   на этих слайдах реально каждый раз давала новый, но всё ещё читаемый
+   результат. */
+function pickContrastColor(bg, palette){
+  const candidates = palette.filter(c=>c.toUpperCase()!==bg.toUpperCase());
+  if(!candidates.length) return isDark(bg) ? '#FFFFFF' : '#14161a';
+  const scored = candidates
+    .map(c=>({c, diff:Math.abs(luminance(bg) - luminance(c))}))
+    .sort((a,b)=>b.diff-a.diff)
+    .slice(0, Math.min(3, candidates.length));
+  const totalWeight = scored.reduce((s,x)=>s + x.diff + 1, 0);
+  let r = Math.random() * totalWeight;
+  for(const item of scored){
+    r -= (item.diff + 1);
+    if(r <= 0) return item.c;
+  }
+  return scored[0].c;
+}
+
+/* Слайд 5 — теперь РЕАЛЬНО генерируется через AI (gpt-image-1), один вызов
+   на каждый цвет из Color Palette (максимум 5, как и раньше в локальной
+   CSS-версии) — так же, как паттерны/баннеры: раздельные вызовы вместо
+   одной большой картинки с "рядом иконок" надёжнее (не расползается
+   компоновка, легко перегенерировать один цвет отдельно при желании).
+   Референс — весь логотип (а не заранее обрезанный символ), потому что
+   сам промпт просит модель САМА решить, есть ли в лого отдельный символ
+   или его нужно вывести из леттеринга. */
+async function generateSymbolImages(){
+  const out = [];
+  const ref = state.logoDataUrlForAI || state.logoDataUrl;
+  const colors = state.colors.length ? state.colors : ['#002D95','#FFFFFF','#000000','#FF559C','#F8FF20'];
+  const palette = colors.slice(0,5);
+  for(let i=0;i<palette.length;i++){
+    const bg = palette[i];
+    const fg = pickContrastColor(bg, palette);
+    const prompt = `${PROMPTS.extractSymbol}
+
+For THIS specific image, generate only ONE icon tile (not the full row of variations) — background color exactly ${bg}, symbol color exactly ${fg}. Center the rounded-square app-icon shape with generous padding on a plain ${bg} background. No label text, no other icons, no other colors in frame.`;
+    try{ out.push(await callOpenAIImage(prompt, ref, '1024x1024')); }
+    catch(e){ console.error('symbol tile', i, e); out.push(null); }
+  }
+  return out;
+}
+
+/* Слайд 6 — 6 плиток, как явно указано в промпте (2x3 сетка). Референсом
+   идёт РЕАЛЬНЫЙ кроп символа (state.symbolCropDataUrl), а не текстовое
+   описание "из головы". Сам промпт — PROMPTS.pattern целиком + приписка
+   под конкретный тайл (нужная пара bg/fg на этот вызов), по той же схеме,
+   что и generateSymbolImages(). */
+async function generatePatternImages(count=6){
+  const out = [];
+  const ref = state.symbolCropDataUrl || state.logoDataUrlForAI;
+  for(let i=0;i<count;i++){
+    const bg = state.colors[i % state.colors.length] || '#002D95';
+    const fg = state.colors[(i+2) % state.colors.length] || '#FF559C';
+    const prompt = `${PROMPTS.pattern}
+
+For THIS specific image, generate only ONE pattern tile (not the full 2×3 grid, and not a "grid on a neutral background" layout — ignore that part of the layout instructions above for this single tile). Background color exactly ${bg}, symbol color exactly ${fg}. The background color of color ${bg} must fill 100% of the canvas edge-to-edge, touching all four sides and all four corners directly, with the repeated symbol pattern painted straight on top of it at full bleed.
+Do NOT add any of the following, even partially or on just one or two sides: a white, black, grey, or neutral margin/mat/border/frame/card/mount around the pattern; a device or screen mockup/bezel; a drop shadow, vignette, or gradient fade at the edges; any rounded-rectangle "tile floating on a page" composition. The image itself IS the tile — it must look identical if cropped tighter, with pattern and color ${bg} still touching every edge.
+No label text, no grid lines, no other tiles, no second color anywhere except ${bg} and ${fg}.`;
+    try{ out.push(await callOpenAIImage(prompt, ref, '1024x1024')); }
+    catch(e){ console.error('pattern tile', i, e); out.push(null); }
+  }
+  return out;
+}
+
+/* Слайд 7 — 4 формата, ПОРЯДОК соответствует .bn-tile:nth-child() в CSS
+   (banner-grid-v2): Square слева на всю высоту, Wide и Wide (alt) по
+   центру друг под другом, Tall справа на всю высоту.
+   Каждый формат генерируется РОВНО в одном из 3 штатных размеров
+   gpt-image-1 (1024x1024 / 1536x1024 / 1024x1536) и используется как
+   есть — БЕЗ КРОПА, потому что сетка (banner-grid-v2) подобрана так,
+   что ширина колонок Square/Tall в точности повторяет их родную
+   пропорцию (1:1 и 2:3). Раньше тут был доп. шаг cropCoverToExactSize
+   под произвольные 848x425/425x425/320x770/1300x320 — теперь он не
+   нужен, значит меньше шагов и нечему падать на кропе. */
+const BANNER_FORMATS = [
+  { label:'square banner (1024x1024), left column spanning full height', size:'1024x1024', split:'horizontal — a top block with empty space reserved for a logo corner overlay, and a bottom block containing the 3D symbol and tagline' },
+  { label:'wide landscape banner (1536x1024), center-top position', size:'1536x1024', split:'vertical — a left block containing the 3D symbol, and a right block containing the tagline, with the top-left corner kept clear for a logo overlay' },
+  { label:'wide landscape banner (1536x1024), alternate color, center-bottom position', size:'1536x1024', split:'vertical — a left block containing the 3D symbol, and a right block containing the tagline, with the top-left corner kept clear for a logo overlay' },
+  { label:'tall vertical/story format banner (1024x1536), right column spanning full height', size:'1024x1536', split:'horizontal — a top block with empty space reserved for a logo corner overlay, and a bottom block containing the 3D symbol and tagline' },
+];
+
+/* Один и тот же тэглайн для ВСЕХ 4 баннеров — раньше каждый вызов сам
+   придумывал себе текст, отсюда разнобой ("GET ONLINE" / "POWERFUL
+   SOLUTIONS" / "POWER YOUR SITE" / "DIGITAL SOLUTIONS" на одном сете).
+   Теперь текст генерируется ОДИН раз и передаётся в каждый промпт как
+   обязательный дословный текст. */
+async function generateBannerTagline(){
+  const lang = state.bannerLanguage || 'English';
+  const langNote = lang === 'English' ? '' : ` Write it in ${lang}.`;
+  const prompt = `Brand name: ${state.brandName}. Come up with ONE short, punchy 2-4 word marketing tagline/slogan for this brand's promotional banners — bold and energetic (e.g. reflecting themes of creativity, speed, impact, or momentum, whatever fits the brand name).${langNote} Return ONLY the tagline text itself, nothing else — no quotes, no punctuation around it, no explanation.`;
+  try{
+    const text = await callOpenAIText(
+      'You are a senior brand copywriter. Follow the requested output format exactly.',
+      prompt
+    );
+    return (text || '').trim().replace(/^["'«»]+|["'«»]+$/g, '') || state.brandName;
+  }catch(e){
+    console.error('generateBannerTagline failed', e);
+    return state.brandName;
+  }
+}
+
+async function generateBannerImages(){
+  const out = [];
+  const ref = state.symbolCropDataUrl || state.logoDataUrlForAI;
+  if(!state.bannerTagline) state.bannerTagline = await generateBannerTagline();
+  const tagline = state.bannerTagline;
+  for(let i=0;i<BANNER_FORMATS.length;i++){
+    const bg1 = state.colors[i % state.colors.length] || '#002D95';
+    const bg2 = pickContrastColor(bg1, state.colors) || '#FFFFFF';
+    const fmt = BANNER_FORMATS[i];
+    const prompt = `The attached reference image is the exact graphic symbol cropped from the brand's real logo. Render THIS actual mark as a bold glossy 3D object — highlights, shadow, depth, tilted at a dynamic angle, small decorative sphere accents nearby. Use EXACTLY this tagline text on the banner, verbatim and identical to how it's written here — do not paraphrase, shorten, translate, or invent a different one: "${tagline}". Display the tagline in large condensed sans-serif type. Format for this one: ${fmt.label}. Keep all text and the 3D symbol comfortably inside the frame with generous margin from every edge — this image is used at its native size with no cropping. Do NOT draw any logo, wordmark, or brand name text anywhere in the composition — the real logo will be overlaid separately as a small badge afterward, so leave that corner area visually simple and uncluttered. Split the banner background into exactly TWO solid, flat color blocks with a clean hard edge between them (no gradient, no blending) — layout: ${fmt.split}. First block color: ${bg1}. Second block color: ${bg2}. Use only colors already present in the logo.`;
+    let dataUrl = null;
+    try{
+      dataUrl = await callOpenAIImage(prompt, ref, fmt.size);
+    }
+    catch(e){ console.error('banner tile', i, e); }
+    out.push(dataUrl);
+  }
+  return out;
+}
+
+/* Слайд 8 — теперь тоже РЕАЛЬНАЯ AI-генерация (раньше PROMPTS.landingExample
+   не вызывался вообще, слайд собирался локальным HTML/CSS вокруг Баннера 4).
+   Референс — уже готовый Wide(alt) баннер (index 2, тот же, что раньше
+   просто вставлялся как hero-картинка) — модель встраивает ЕГО, не рисует
+   новый герой-баннер с нуля (это явно требует новый промпт). Формат —
+   1536x1024 (самый широкий из штатных), ближе всего к пропорциям
+   .example-frame. */
+async function generateExampleImage(){
+  const ref = state.bannerImages[2] || state.bannerImages.find(Boolean);
+  if(!ref) return null;
+  try{
+    return await callOpenAIImage(PROMPTS.landingExample, ref, '1536x1024');
+  }catch(e){
+    console.error('example mockup failed', e);
+    return null;
+  }
+}
+
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* Определяем "тёмный" ли цвет — для heuristics с инверсией логотипа на плитках слайда 4 */
+function isDark(hex){
+  const [r,g,b] = hexToRgb(hex);
+  return (0.299*r + 0.587*g + 0.114*b) < 140;
+}
+function luminance(hex){
+  const [r,g,b] = hexToRgb(hex);
+  return 0.299*r + 0.587*g + 0.114*b;
+}
+
+/* =========================================================================
+   ГЕНЕРАЦИЯ ВСЕЙ ПРЕЗЕНТАЦИИ
+   ========================================================================= */
+async function buildPresentation(){
+  // символ: если пользователь загрузил отдельно — берём его, иначе fallback на сам логотип
+  if(!state.symbolDataUrl) state.symbolDataUrl = state.logoDataUrl;
+
+  // OpenAI (vision и images-edits) не принимает SVG — держим отдельные PNG-версии
+  // только для AI-запросов, а на слайдах продолжаем показывать оригинальный SVG (он резче)
+  state.logoDataUrlForAI = await ensurePngDataUrl(state.logoDataUrl);
+  state.logoDataUrlExport = await buildLogoExportPng();
+  state.symbolDataUrlForAI = await ensurePngDataUrl(state.symbolDataUrl);
+
+  setLoadingText('AI is analyzing the logo (legend + palette + symbol)…');
+  const brief = await analyzeBrand(state.brandName, state.logoDataUrlForAI);
+  state.symbolBbox = brief.symbolBbox;
+  state.legendHtml = brief.legendHtml || fallbackLegendHtml(state.brandName, state.logoDataUrl);
+
+  // Палитра: если загружен референс-креатив (баннер), его цвета — ПРИОРИТЕТ
+  // над цветами логотипа. Иначе — пипеткой/от AI берём реальные цвета
+  // логотипа. В любом случае всегда дотягиваем до ровно 5 цветов случайными,
+  // но гармоничными добавками (см. buildHarmoniousPalette выше).
+  let extracted = [];
+  if(state.creativeDataUrl){
+    setLoadingText('Extracting colors from the reference creative…');
+    extracted = await extractColorsFromRaster(state.creativeDataUrl, 6);
+  }
+  if(!extracted.length){
+    extracted = brief.colors && brief.colors.length ? brief.colors : [];
+  }
+  if(!extracted.length){
+    if(state.logoType === 'svg'){
+      const svgText = await state.logoFile.text();
+      extracted = extractColorsFromSvg(svgText);
+    } else {
+      extracted = await extractColorsFromRaster(state.logoDataUrl);
+    }
+  }
+  state.extractedColorsBase = extracted;
+  const palette = buildHarmoniousPalette(extracted, 5);
+  state.colors = palette.colors;
+  state.generatedColors = palette.generated;
+
+  // Реальный кроп символа из загруженного лого (по bbox от AI) — используется
+  // как референс для AI-генерации иконок, паттернов и баннеров.
+  setLoadingText('Cropping the symbol out of the logo…');
+  state.symbolCropDataUrl = await buildSymbolCrop();
+
+  setLoadingText('AI is generating the symbol icon set…');
+  state.symbolImages = await generateSymbolImages();
+
+  setLoadingText('AI is generating patterns…');
+  state.patternImages = await generatePatternImages(6);
+
+  setLoadingText('AI is generating banners…');
+  state.bannerImages = await generateBannerImages();
+
+  setLoadingText('AI is generating the landing page example…');
+  state.exampleImage = await generateExampleImage();
+
+  setLoadingText('Laying out the slides…');
+  renderAllSlides();
+
+  document.getElementById('loadingScreen').style.display='none';
+  document.getElementById('presentation').style.display='block';
+  document.getElementById('tbBrandName').textContent = state.brandName;
+}
+
+function setLoadingText(t){ document.getElementById('loadingText').textContent = t; }
+
+function cornerBadge(){
+  return `<div class="corner-badge">${CLICKABLE_ICON_SVG}</div>`;
+}
+function bubbles(variant=1){
+  const sets = [
+    `<div class="bubble" style="width:9%;top:-4%;left:42%;"></div><div class="bubble" style="width:6%;top:34%;left:2%;"></div>`,
+    `<div class="bubble" style="width:7%;top:6%;right:30%;"></div><div class="bubble" style="width:5%;top:60%;left:6%;"></div>`,
+    `<div class="bubble" style="width:5%;top:10%;left:12%;"></div><div class="bubble" style="width:8%;bottom:-5%;right:10%;"></div>`,
+  ];
+  return sets[variant % sets.length];
+}
+
+/* Кнопка "перегенерировать" — на всех слайдах, кроме первого (титул с самим
+   лого) и последнего (финальный "спасибо"), т.к. только эти два не зависят
+   ни от какой генерации/палитры. */
+function regenButtonHtml(slideNum){
+  if(slideNum < 2 || slideNum > 8) return '';
+  return `<button type="button" class="regen-btn" data-slide="${slideNum}" title="Regenerate this slide" aria-label="Regenerate this slide">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
+    <span>Regenerate</span>
+  </button>`;
+}
+
+function renderAllSlides(){
+  const wrap = document.getElementById('slidesWrap');
+  wrap.innerHTML = '';
+  const slides = [
+    buildSlide1(), buildSlide2(), buildSlide3(), buildSlide4(),
+    buildSlide5(), buildSlide6(), buildSlide7(), buildSlide8(), buildSlide9()
+  ];
+  slides.forEach((html, idx)=>{
+    const slideNum = idx+1;
+    const outer = document.createElement('div');
+    outer.className='slide-outer';
+    const bgUrl = `/screen-${slideNum}.jpg`;
+    outer.innerHTML = `<div class="slide s${slideNum}" id="slide${slideNum}" style="background-image:url('${bgUrl}');background-size:cover;background-position:center;background-repeat:no-repeat;">${html}${regenButtonHtml(slideNum)}</div>`;
+    wrap.appendChild(outer);
+  });
+}
+
+/* Подменяет разметку одного слайда (для перегенерации), не трогая остальные. */
+function setSlideHtml(slideNum, html){
+  const el = document.getElementById(`slide${slideNum}`);
+  if(!el) return;
+  el.innerHTML = html + regenButtonHtml(slideNum);
+}
+
+/* ---- Слайд 1: Титульный ---- */
+function buildSlide1(){
+  return `
+    ${bubbles(0)}
+    <div class="slide-label">Logotype</div>
+    <div class="corner-wordmark">${CLICKABLE_WORDMARK_SVG}</div>
+    <div class="s1-logo-frame"><img data-logo="1" src="${state.logoDataUrl}"></div>
+  `;
+}
+
+/* ---- Слайд 2: Легенда ---- */
+function buildSlide2(){
+  return `
+    ${bubbles(1)}
+    <div class="slide-label">Legend</div>
+    ${cornerBadge()}
+    <div class="slide-inner">
+      <img class="legend-wordmark" data-logo="1" data-fit="contain" data-fit-x="left" src="${state.logoDataUrl}" alt="${escapeHtml(state.brandName)}">
+      <div class="legend-text" contenteditable="true">${state.legendHtml}</div>
+    </div>
+  `;
+}
+
+/* ---- Слайд 3: Палитра ---- */
+function buildSlide3(){
+  const swatches = state.colors.map(hex=>{
+    return `<div class="swatch">
+        <div class="sq" style="background:${hex};${hex==='#FFFFFF'?'border:1px solid #eee;':''}"></div>
+        <div class="hex" contenteditable="true">${hex}</div>
+      </div>`;
+  }).join('');
+  return `
+    ${bubbles(2)}
+    <div class="slide-label">Color Palette</div>
+    ${cornerBadge()}
+    <div class="palette-row">${swatches}</div>
+  `;
+}
+
+/* ---- Слайд 4: Color Logo Variations ---- */
+function buildSlide4(){
+  const colors = state.colors.length ? state.colors : ['#002D95','#FFFFFF','#000000','#FF559C','#F8FF20'];
+  const maskStyle = hex => `background:${hex};-webkit-mask-image:url('${state.logoDataUrl}');mask-image:url('${state.logoDataUrl}');-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain;`;
+  // 5 блоков — 5 цветов из той же гармоничной палитры, что и на слайде
+  // Color Palette. Каждый блок: фон = один из 5 цветов, лого (через CSS
+  // mask) перекрашено в цвет из той же палитры, максимально контрастный
+  // именно к этому фону — так лого остаётся "в гармонии" с палитрой на
+  // любом из пяти фонов.
+  const tiles = colors.slice(0,5).map(bg=>{
+    const fg = pickContrastColor(bg, colors);
+    const border = bg.toUpperCase()==='#FFFFFF' ? 'border:1px solid #eee;' : '';
+    return `<div class="lv-tile" style="background:${bg};${border}">
+        <div class="lv-logo-recolor" data-mask-src="${state.logoDataUrl}" data-mask-fg="${fg}" style="${maskStyle(fg)}"></div>
+      </div>`;
+  }).join('');
+  return `
+    ${bubbles(0)}
+    <div class="slide-label">Color Logo Variations</div>
+    ${cornerBadge()}
+    <div class="lv-grid">${tiles}</div>
+  `;
+}
+
+/* ---- Слайд 5: Символ ---- */
+function buildSlide5(){
+  if(!state.hasSymbol){
+    return `
+      <div class="slide-label">Symbol</div>${cornerBadge()}
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#9aa0aa;font-family:var(--font);font-size:20px;">
+        No separate symbol was flagged in this logo
+      </div>`;
+  }
+  return `
+    ${bubbles(1)}
+    <div class="slide-label">Symbol</div>
+    ${cornerBadge()}
+    <div class="symbol-row">${buildSymbolTiles()}</div>
+  `;
+}
+
+/* ---- Слайд 6: Паттерн ---- */
+function buildSlide6(){
+  const images = state.patternImages.length ? state.patternImages : new Array(6).fill(null);
+  const greys = ['#DEE1E6','#CDD0D7','#BCC0C8','#D3D6DC','#C6C9D0','#B5B8C2'];
+  const tiles = images.map((src,i)=> src
+    ? `<div class="pg-tile"><img src="${src}" data-fit="cover"></div>`
+    : `<div class="pg-tile" style="background:${greys[i%greys.length]};">
+        <div class="p-overlay" style="position:absolute;inset:0;background-image:radial-gradient(#9BA0AB 2px, transparent 2.5px);background-size:20px 20px;opacity:.6;"></div>
+      </div>`
+  ).join('');
+  return `
+    ${bubbles(2)}
+    <div class="slide-label">Pattern</div>
+    ${cornerBadge()}
+    <div class="pattern-grid">${tiles}</div>
+  `;
+}
+
+/* ---- Слайд 7: Баннеры ---- */
+function buildSlide7(){
+  const images = state.bannerImages.length ? state.bannerImages : new Array(4).fill(null);
+  const greys = ['#DEE1E6','#C6C9D0','#D3D6DC','#BCC0C8'];
+  const logoTag = state.logoDataUrl ? `<div class="bn-logo-badge"><img data-logo="1" src="${state.logoDataUrl}"></div>` : '';
+  const tiles = images.map((src,i)=> src
+    ? `<div class="bn-tile"><img src="${src}">${logoTag}</div>`
+    : `<div class="bn-tile" style="background:${greys[i%greys.length]};display:flex;align-items:center;justify-content:center;color:#6b6f78;font-family:var(--font);font-size:14px;">Banner ${i+1}</div>`
+  ).join('');
+  return `
+    ${bubbles(0)}
+    <div class="slide-label">Banners</div>
+    ${cornerBadge()}
+    <div class="banner-grid-v2">${tiles}</div>
+  `;
+}
+
+/* ---- Слайд 8: Пример применения ----
+   Приоритет — РЕАЛЬНАЯ AI-генерация целиком (state.exampleImage, см.
+   generateExampleImage): в промпт (PROMPTS.landingExample) уходит уже
+   готовый Wide(alt) баннер (индекс 2) как референс, модель встраивает его
+   в мокап лендинга, а не рисует новый герой с нуля. Если генерация не
+   удалась (нет ключа/сеть упала) — откатываемся на старую локальную
+   сборку: реальный баннер как hero-картинка + nav/карточки из палитры,
+   плюс настоящий загруженный логотип в nav, чтобы слайд не был пустым. */
+function buildSlide8(){
+  if(state.exampleImage){
+    return `
+      ${bubbles(1)}
+      <div class="slide-label">Example</div>
+      ${cornerBadge()}
+      <div class="example-frame">
+        <img src="${state.exampleImage}" data-fit="cover" data-fit-y="top" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;">
+      </div>
+    `;
+  }
+  const colors = state.colors.length ? state.colors : ['#002D95','#FFFFFF','#000000','#FF559C','#F8FF20'];
+  const banner4 = state.bannerImages[2];
+  const navBg = colors[0];
+  const navFg = isDark(navBg) ? '#FFFFFF' : '#14161a';
+  const ctaBg = pickContrastColor(navBg, colors);
+  const ctaFg = isDark(ctaBg) ? '#FFFFFF' : '#14161a';
+  const cardColors = colors.filter(c=>c.toUpperCase()!==navBg.toUpperCase());
+  const heroFallbackLeft = colors[1] || '#C6C9D0', heroFallbackRight = colors[2] || '#D3D6DC';
+  const navLogo = state.logoDataUrl ? `<img class="ex-logo" data-logo="1" src="${state.logoDataUrl}">` : '';
+  return `
+    ${bubbles(1)}
+    <div class="slide-label">Example</div>
+    ${cornerBadge()}
+    <div class="example-frame">
+      <div class="ex-nav" style="background:${navBg};">
+        ${navLogo}
+        <span class="ex-link" contenteditable="true" style="color:${navFg};opacity:.85;">Services</span>
+        <span class="ex-link" contenteditable="true" style="color:${navFg};opacity:.85;">Pricing</span>
+        <span class="ex-link" contenteditable="true" style="color:${navFg};opacity:.85;">About</span>
+        <span class="ex-link" contenteditable="true" style="color:${navFg};opacity:.85;">Contact</span>
+        <span class="ex-cta" style="background:${ctaBg};color:${ctaFg};" contenteditable="true">Write to us</span>
+      </div>
+      <div class="ex-hero">
+        ${banner4
+          ? `<img src="${banner4}" data-fit="cover" data-fit-y="top" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;">`
+          : `<div class="ex-hero-left" style="background:${heroFallbackLeft};color:#14161a;" contenteditable="true">${escapeHtml(state.brandName)}</div>
+             <div class="ex-hero-right" style="background:${heroFallbackRight};color:#14161a;" contenteditable="true">YOUR TAGLINE</div>`
+        }
+      </div>
+      <div class="ex-cards">
+        ${[0,1,2,3].map(i=>`<div class="ex-card" style="background:${cardColors[i%cardColors.length]||'#e7e9ee'};opacity:.16;"></div>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+/* ---- Слайд 9: Финал ---- */
+function buildSlide9(){
+  return `
+    ${bubbles(2)}
+    <div class="top-logo" style="height:34px;">${CLICKABLE_LOGO_FULL_SVG}</div>
+    <div class="thanks-wrap">
+      <div class="thanks-heading">${THANKYOU_HEADING_SVG}</div>
+    </div>
+    <div class="footer-note" contenteditable="true" style="font-family:var(--font);">The presented logo was designed in ${state.year} by Clickable for ${escapeHtml(state.brandName)}.<br>All rights reserved.</div>
+  `;
+}
+
+/* =========================================================================
+   ПЕРЕГЕНЕРАЦИЯ ОТДЕЛЬНОГО СЛАЙДА — кнопка ⟳ на слайдах 2–8. Каждая функция
+   трогает только то, что нужно для своего слайда (без пересчёта всей
+   презентации), и подменяет разметку через setSlideHtml.
+   ========================================================================= */
+async function generateLegendOnly(){
+  const prompt = `Brand name: ${state.brandName}. ${PROMPTS.legend}
+Output as exactly two HTML <p> paragraphs, with 2-3 key words wrapped in <b> tags.
+Return ONLY the two <p> paragraphs — no markers, no extra commentary.`;
+  const text = await callOpenAIText(
+    'You are a senior brand designer analyzing a logo for a brand guideline deck. Follow the requested output format exactly.',
+    visionContent(prompt, state.logoDataUrlForAI)
+  );
+  return text.trim();
+}
+async function regenerateSlide2(){
+  const html = await generateLegendOnly();
+  if(html) state.legendHtml = html;
+  setSlideHtml(2, buildSlide2());
+}
+
+async function regenerateSlide3(){
+  const base = state.extractedColorsBase && state.extractedColorsBase.length ? state.extractedColorsBase : state.colors;
+  const palette = buildHarmoniousPalette(base, 5);
+  state.colors = palette.colors;
+  state.generatedColors = palette.generated;
+  setSlideHtml(3, buildSlide3());
+}
+
+function regenerateSlide4(){
+  setSlideHtml(4, buildSlide4());
+}
+
+async function regenerateSlide5(){
+  try{
+    const bbox = await requestSymbolBbox(state.logoDataUrlForAI, true);
+    if(bbox) state.symbolBbox = bbox;
+  }catch(e){ console.error('regenerateSlide5 bbox failed', e); }
+  state.symbolCropDataUrl = await buildSymbolCrop();
+  state.symbolImages = await generateSymbolImages();
+  setSlideHtml(5, buildSlide5());
+}
+
+async function regenerateSlide6(){
+  state.patternImages = await generatePatternImages(6);
+  setSlideHtml(6, buildSlide6());
+}
+
+async function regenerateSlide7(){
+  state.bannerTagline = await generateBannerTagline();
+  state.bannerImages = await generateBannerImages();
+  setSlideHtml(7, buildSlide7());
+}
+
+async function regenerateSlide8(){
+  state.exampleImage = await generateExampleImage();
+  setSlideHtml(8, buildSlide8());
+}
+
+const SLIDE_REGENERATORS = {
+  2: regenerateSlide2,
+  3: regenerateSlide3,
+  4: regenerateSlide4,
+  5: regenerateSlide5,
+  6: regenerateSlide6,
+  7: regenerateSlide7,
+  8: regenerateSlide8,
+};
+
+document.getElementById('slidesWrap').addEventListener('click', async (e)=>{
+  const btn = e.target.closest('.regen-btn');
+  if(!btn || btn.classList.contains('is-loading')) return;
+  const slideNum = parseInt(btn.dataset.slide, 10);
+  const fn = SLIDE_REGENERATORS[slideNum];
+  if(!fn) return;
+  btn.classList.add('is-loading');
+  btn.disabled = true;
+  try{
+    await fn();
+  }catch(err){
+    console.error('regenerate slide', slideNum, err);
+    alert('Could not regenerate this slide: ' + err.message);
+    btn.classList.remove('is-loading');
+    btn.disabled = false;
+  }
+});
+
+/* =========================================================================
+   PDF EXPORT — helpers
+   -------------------------------------------------------------------------
+   html2canvas does NOT support the CSS `object-fit` / `object-position`
+   properties on <img> (it just stretches the raw image to fill the box),
+   and does NOT support `mask-image` on any element (it paints a flat
+   rectangle in the background color and drops the mask entirely). That is
+   why, before this fix, the exported PDF showed: legend-wordmark and
+   pg-tile images stretched/squished to their box, .example-frame images
+   squashed instead of cropped, and .lv-logo-recolor/.symtile-mark showing
+   as plain colored rectangles instead of the recolored logo shape.
+   The fix: right before capture, "bake" the correct pixel result (crop+fit,
+   or mask+recolor) into a flat PNG sized exactly to the element's on-screen
+   box, and swap it in — html2canvas can draw a plain, already-correct PNG
+   just fine. Everything is restored after the capture completes. */
+/* Общий множитель разрешения для экспорта в PDF — должен совпадать со
+   scale, который передаётся в html2canvas() ниже, иначе картинки,
+   запечённые (baked) в более низком разрешении, будут выглядеть мыльно
+   после того как html2canvas их дополнительно увеличит. */
+const PDF_EXPORT_SCALE = 3;
+
+function loadImageEl(src){
+  return new Promise((resolve,reject)=>{
+    const img = new Image();
+    img.onload = ()=>resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+/* Replicates `object-fit: cover|contain` + `object-position` by hand,
+   baked into a canvas sized to (boxW,boxH)*scale. */
+async function bakeFittedImage(imgSrc, boxW, boxH, fit, posX, posY, scale){
+  const img = await loadImageEl(imgSrc);
+  const natW = img.naturalWidth || img.width || 1;
+  const natH = img.naturalHeight || img.height || 1;
+  const cw = Math.max(1, Math.round(boxW*scale));
+  const ch = Math.max(1, Math.round(boxH*scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = cw; canvas.height = ch;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,cw,ch);
+  const s = fit === 'contain' ? Math.min(cw/natW, ch/natH) : Math.max(cw/natW, ch/natH);
+  const drawW = natW*s, drawH = natH*s;
+  let dx = (cw-drawW)/2, dy = (ch-drawH)/2;
+  if(posX === 'left') dx = 0; else if(posX === 'right') dx = cw-drawW;
+  if(posY === 'top') dy = 0; else if(posY === 'bottom') dy = ch-drawH;
+  ctx.drawImage(img, dx, dy, drawW, drawH);
+  return canvas.toDataURL('image/png');
+}
+
+/* Replicates the CSS `mask-image` recolor trick (same math as maskStyle())
+   using canvas `source-in` compositing, fit "contain" inside the box, baked
+   into a flat PNG that html2canvas can render like any other image. */
+async function bakeMaskedImage(imgSrc, fgColor, boxW, boxH, scale){
+  const img = await loadImageEl(imgSrc);
+  const natW = img.naturalWidth || img.width || 1;
+  const natH = img.naturalHeight || img.height || 1;
+  const cw = Math.max(1, Math.round(boxW*scale));
+  const ch = Math.max(1, Math.round(boxH*scale));
+  const s = Math.min(cw/natW, ch/natH);
+  const drawW = natW*s, drawH = natH*s;
+  const dx = (cw-drawW)/2, dy = (ch-drawH)/2;
+  const canvas = document.createElement('canvas');
+  canvas.width = cw; canvas.height = ch;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,cw,ch);
+  ctx.drawImage(img, dx, dy, drawW, drawH);
+  ctx.globalCompositeOperation = 'source-in';
+  ctx.fillStyle = fgColor;
+  ctx.fillRect(0,0,cw,ch);
+  ctx.globalCompositeOperation = 'source-over';
+  return canvas.toDataURL('image/png');
+}
+
+/* Swaps every img[data-fit] and every [data-mask-src] inside #slidesWrap
+   for a baked, box-exact PNG. Returns a restore() function that puts
+   everything back exactly as it was. */
+async function bakeExportImages(){
+  const fitImgs = [...document.querySelectorAll('#slidesWrap img[data-fit]')];
+  const fitOriginals = fitImgs.map(img => ({img, src: img.getAttribute('src'), style: img.getAttribute('style') || ''}));
+  await Promise.all(fitImgs.map(async img => {
+    const rect = img.getBoundingClientRect();
+    if(rect.width < 1 || rect.height < 1) return;
+    try{
+      const baked = await bakeFittedImage(
+        img.currentSrc || img.src,
+        rect.width, rect.height,
+        img.dataset.fit || 'cover',
+        img.dataset.fitX || 'center',
+        img.dataset.fitY || 'center',
+        PDF_EXPORT_SCALE
+      );
+      img.src = baked;
+      img.style.objectFit = 'fill';
+      img.style.objectPosition = 'center';
+      if(img.decode) await img.decode().catch(()=>{});
+    }catch(e){ console.error('bakeFittedImage failed', e); }
+  }));
+
+  const maskEls = [...document.querySelectorAll('#slidesWrap [data-mask-src]')];
+  const maskSwaps = [];
+  await Promise.all(maskEls.map(async el => {
+    const rect = el.getBoundingClientRect();
+    if(rect.width < 1 || rect.height < 1) return;
+    try{
+      const baked = await bakeMaskedImage(el.dataset.maskSrc, el.dataset.maskFg, rect.width, rect.height, PDF_EXPORT_SCALE);
+      const img = document.createElement('img');
+      img.src = baked;
+      img.style.cssText = 'width:100%;height:100%;display:block;';
+      if(img.decode) await img.decode().catch(()=>{});
+      el.replaceWith(img);
+      maskSwaps.push({placeholder: img, original: el});
+    }catch(e){ console.error('bakeMaskedImage failed', e); }
+  }));
+
+  return function restore(){
+    fitOriginals.forEach(({img, src, style}) => { img.setAttribute('src', src); img.setAttribute('style', style); });
+    maskSwaps.forEach(({placeholder, original}) => { placeholder.replaceWith(original); });
+  };
+}
+
+/* =========================================================================
+   PDF EXPORT
+   ========================================================================= */
+document.getElementById('downloadPdfBtn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('downloadPdfBtn');
+  const originalLabel = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = 'Preparing PDF…';
+  document.body.classList.add('exporting-pdf');
+
+  // html2canvas ненадёжно определяет intrinsic-размер SVG data-URI — лого
+  // либо растягивается, либо не рисуется вообще. Перед захватом подменяем
+  // ВСЕ <img data-logo> на растровую версию в реальных пропорциях
+  // (buildLogoExportPng, без квадратного паддинга), после экспорта
+  // возвращаем исходный SVG обратно, чтобы на экране всё осталось резким.
+  const logoImgs = [...document.querySelectorAll('img[data-logo]')];
+  const originalSrcs = logoImgs.map(img => img.src);
+  if(state.logoDataUrlExport){
+    logoImgs.forEach(img => { img.src = state.logoDataUrlExport; });
+    await Promise.all(logoImgs.map(img => img.decode ? img.decode().catch(()=>{}) : Promise.resolve()));
+  }
+
+  let restoreBakedImages = () => {};
+
+  try{
+    // Bake object-fit/object-position/mask-image effects that html2canvas
+    // can't render (see bakeExportImages() above) — must run AFTER the logo
+    // swap so it captures the already-corrected logo aspect ratio.
+    restoreBakedImages = await bakeExportImages();
+
+    const slideEls = [...document.querySelectorAll('#slidesWrap .slide')];
+    const { jsPDF } = window.jspdf;
+    let pdf = null;
+    for(let i=0;i<slideEls.length;i++){
+      const canvas = await html2canvas(slideEls[i], {scale:PDF_EXPORT_SCALE, useCORS:true, backgroundColor:null});
+      const imgData = canvas.toDataURL('image/png');
+      if(!pdf){
+        pdf = new jsPDF({unit:'px', format:[canvas.width, canvas.height], orientation:'landscape', compress:true});
+        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      } else {
+        pdf.addPage([canvas.width, canvas.height], 'landscape');
+        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      }
+    }
+    const safeName = (state.brandName || 'presentation').toLowerCase().replace(/[^a-z0-9а-яё]+/gi,'-');
+    pdf.save(`${safeName}-brandbook.pdf`);
+  }catch(err){
+    console.error(err);
+    alert('Could not generate the PDF: ' + err.message);
+  }finally{
+    restoreBakedImages();
+    logoImgs.forEach((img,i) => { img.src = originalSrcs[i]; });
+    btn.disabled=false; btn.innerHTML = originalLabel;
+    document.body.classList.remove('exporting-pdf');
+  }
+});
+</script>
+</body>
+</html>
